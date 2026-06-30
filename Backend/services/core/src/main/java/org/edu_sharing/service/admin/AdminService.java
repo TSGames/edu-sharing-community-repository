@@ -73,6 +73,8 @@ public interface AdminService {
 
 	ApplicationInfo addApplicationFromStream(InputStream is) throws Exception;
 
+	ApplicationInfo updateApplicationFromStream(InputStream is) throws Exception;
+
 	ApplicationInfo addApplication(Map<String,String> properties) throws Exception;
 
 	int importExcel(String parent, InputStream csv, Boolean addToCollection) throws Exception;

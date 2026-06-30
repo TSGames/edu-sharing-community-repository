@@ -500,6 +500,20 @@ public class AdminServiceImpl implements AdminService {
         return storeProperties(appId, props);
     }
 
+    @Override
+    public ApplicationInfo updateApplicationFromStream(InputStream is) throws Exception {
+
+        Properties props = new SortedProperties();
+        props.loadFromXML(is);
+        String appId = props.getProperty(ApplicationInfo.KEY_APPID);
+
+        if (StringUtils.isBlank(appId)) {
+            throw new Exception("no appId found");
+        }
+
+        return storeProperties(appId, props, true);
+    }
+
     public ApplicationInfo addApplication(Map<String, String> properties) throws Exception {
         if (properties == null) {
             throw new Exception("no properties provided");
@@ -536,17 +550,34 @@ public class AdminServiceImpl implements AdminService {
             }
         }
 
-        return storeProperties(appId, props);
+        return storeProperties(appId, props, true);
     }
 
     private ApplicationInfo storeProperties(String appId, Properties props) throws Exception {
+        return storeProperties(appId, props, false);
+    }
+
+    /**
+     * Stores the given application properties as an {@code app-*.properties.xml} file and registers it.
+     *
+     * @param update if {@code false} (add) an exception is thrown when the application is already
+     *               registered; if {@code true} (update or insert) an already registered application is
+     *               overwritten in place without creating a duplicate registry entry.
+     */
+    private ApplicationInfo storeProperties(String appId, Properties props, boolean update) throws Exception {
         String fileNamePart = appId.replaceAll("[/:]", "");
         final String filename = "app-" + fileNamePart + ".properties.xml";
 
-        //check if appID already exists
-//        if (ApplicationInfoList.getApplicationInfos().containsKey(appId)) {
-//            throw new Exception("appId is already in registry");
-//        }
+        String existingFileList = getAppPropertiesApplications();
+
+        if (existingFileList == null) {
+            throw new Exception("AppList is currently empty. Please try again later");
+        }
+
+        boolean alreadyRegistered = Arrays.asList(existingFileList.split(",")).contains(filename);
+        if (alreadyRegistered && !update) {
+            throw new Exception("appId " + appId + " is already in registry");
+        }
 
         //check for mandatory Property type
         String type = props.getProperty(ApplicationInfo.KEY_TYPE);
@@ -568,20 +599,10 @@ public class AdminServiceImpl implements AdminService {
         }
         props.storeToXML(new FileOutputStream(appFile), "");
 
-
-        String existingFileList = getAppPropertiesApplications();
-
-        if(existingFileList == null) {
-            try {
-                boolean ignored = appFile.delete();
-            } catch(Throwable t){
-                logger.warn("Could not rollback app file " + appFile.getName(), t);
-            }
-            throw new Exception("AppList is currently empty. Please try again later");
+        if (!alreadyRegistered) {
+            String newProperty = existingFileList + "," + filename;
+            changeAppPropertiesApplications(newProperty, new Date() + " added file:" + filename);
         }
-
-        String newProperty=existingFileList+","+filename;
-        changeAppPropertiesApplications(newProperty, new Date() + " added file:" + filename);
 
 
         if (type.equals(ApplicationInfo.TYPE_RENDERSERVICE)) {
