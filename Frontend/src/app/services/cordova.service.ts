@@ -219,6 +219,10 @@ export class CordovaService extends AppServiceAbstract {
     private serviceIsReady = false;
 
     private lastIntent: any;
+    private pendingCameraCallbacks: {
+        successCallback: (data: string) => void;
+        errorCallback: Function;
+    } | null = null;
 
     initialHref: string;
 
@@ -1022,6 +1026,41 @@ export class CordovaService extends AppServiceAbstract {
         errorCallback: Function,
         options: any = null,
     ): void {
+        const eduBridge = (window as any).eduBridge;
+        if (eduBridge?.takePhoto) {
+            // Native shell delivers the capture asynchronously via eduBridgeOnPhotoTaken
+            // (see eduBridge-contract.md §5) — a camera capture can take arbitrarily long,
+            // so the bridge does not block JS execution like the other sync methods do.
+            if (this.pendingCameraCallbacks) {
+                errorCallback('FAIL-BUSY', 'a photo capture is already in progress');
+                return;
+            }
+            this.pendingCameraCallbacks = { successCallback, errorCallback };
+            (window as any).eduBridgeOnPhotoTaken = (json: string) => {
+                const callbacks = this.pendingCameraCallbacks;
+                this.pendingCameraCallbacks = null;
+                if (!callbacks) {
+                    return;
+                }
+                try {
+                    const payload = JSON.parse(json);
+                    if (payload?.success) {
+                        callbacks.successCallback(payload.stream);
+                    } else {
+                        callbacks.errorCallback('FAIL-PLUGIN', payload?.error ?? 'unknown error');
+                    }
+                } catch (e) {
+                    callbacks.errorCallback('FAIL-PARSE', e);
+                }
+            };
+            try {
+                eduBridge.takePhoto();
+            } catch (e) {
+                this.pendingCameraCallbacks = null;
+                errorCallback('FAIL-EXCEPTION', e);
+            }
+            return;
+        }
         try {
             // Default Options
             if (options == null)

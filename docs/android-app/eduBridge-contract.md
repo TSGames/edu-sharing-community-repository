@@ -43,10 +43,19 @@ primitiv) zurück bzw. `void`.
 | `consumeShare()` | `void` | Markiert den letzten Share als verarbeitet (verhindert erneutes Feuern beim Resume). |
 | `exitApp()` | `void` | App beenden (ersetzt `navigator.app.exitApp()`). |
 | `readFile(uri)` | `string` (base64) | Optional: base64-Inhalt einer `content://`-URI nachladen, falls nicht inline geliefert. |
+| `takePhoto()` | `void` | Startet die native Kamera-Aufnahme **asynchron** (ersetzt `navigator.camera.getPicture(...)`). Kehrt sofort zurück; das Ergebnis kommt über `window.eduBridgeOnPhotoTaken` (§3/§5). Permission-Handling (`CAMERA`) übernimmt die Shell intern — kein separater Bridge-Aufruf nötig. |
 
 Persistenter Speicher (OAuth-Token, Server-URL) nutzt **`window.localStorage`** direkt —
 keine Bridge-Methode nötig (same-origin Remote-WebView; das alte `NativeStorage`-Backup
 entfällt auf Android).
+
+**Ausnahme vom Sync-Muster:** `takePhoto()` ist bewusst **nicht** synchron wie die übrigen
+Methoden — eine Kamera-Aufnahme kann durch Nutzerinteraktion beliebig lange dauern, und ein
+synchroner `@JavascriptInterface`-Aufruf würde die JS-Ausführung der Seite für diese Zeit
+blockieren (Risiko einer „Seite reagiert nicht"-Warnung im WebView). Stattdessen kehrt
+`takePhoto()` sofort zurück und liefert das Ergebnis asynchron über den Callback
+`window.eduBridgeOnPhotoTaken` (siehe §3, §5) — analog zum bestehenden Push-Modell für
+Warm-Shares (`eduBridgeOnShare`).
 
 ---
 
@@ -61,6 +70,7 @@ Start):
 | `window.eduBridgeOnShare(payloadJson)` | `string` (JSON, siehe §4) | Neuer `ACTION_SEND` während die App **läuft** (warm). |
 | `window.eduBridgeOnResume()` | – | App kam aus dem Hintergrund (> ~1 min) zurück. |
 | `window.eduBridgeOnBack()` | – | Hardware-Zurück-Taste; App entscheidet (WebView-History vs. `exitApp`). |
+| `window.eduBridgeOnPhotoTaken(payloadJson)` | `string` (JSON, siehe §5) | Ergebnis einer per `takePhoto()` gestarteten Kamera-Aufnahme (Erfolg, Abbruch oder Fehler). |
 
 Kaltstart-Shares kommen über `getInitialShare()`, Warm-Shares über `eduBridgeOnShare`.
 
@@ -95,7 +105,37 @@ Link/Text `uri`/`text` über `isLink()`/`isTextSnippet()`.
 
 ---
 
-## 5. Mapping alt (Cordova) → neu (`eduBridge`)
+## 5. Photo-Capture-Payload (JSON)
+
+Argument von `window.eduBridgeOnPhotoTaken(payloadJson)`, ausgelöst nach `takePhoto()`:
+
+```json
+{
+  "success":  true,
+  "mimetype": "image/jpeg",
+  "fileName": "photo_20260701_120000.jpg",
+  "stream":   "<base64>"
+}
+```
+
+Bei Abbruch (Nutzer bricht die Kamera-App ab) oder Fehler:
+
+```json
+{ "success": false, "error": "CANCELLED" }
+```
+
+Regeln:
+- `stream` ist immer ein JPEG (die Shell korrigiert die EXIF-Rotation vor der Kodierung),
+  unabhängig vom `options`-Parameter der alten Cordova-API — `getPhotoFromCamera` reicht
+  `options` weiterhin entgegen, die eduBridge-Implementierung ignoriert sie aber bewusst
+  (keine Konfigurationsfläche über die Bridge, um die Shell einfach zu halten).
+- Nur eine Aufnahme gleichzeitig: ein erneuter `takePhoto()`-Aufruf, während bereits eine
+  Aufnahme läuft, überschreibt den ausstehenden Callback nicht — `CordovaService` serialisiert
+  das analog zum bisherigen Cordova-Verhalten (kein gleichzeitiger Zugriff aus der SPA).
+
+---
+
+## 6. Mapping alt (Cordova) → neu (`eduBridge`)
 
 | Heute in `CordovaService` (tot) | Neu |
 |---|---|
@@ -110,10 +150,12 @@ Link/Text `uri`/`text` über `isLink()`/`isTextSnippet()`.
 | `NativeStorage.*` (iOS-Backup) | entfällt (Android: nur `localStorage`) |
 | `navigator.app.exitApp()` | `eduBridge.exitApp()` |
 | dynamisches `app-registry…/cordova.js`-Laden | entfällt (Bridge ist nativ injiziert) |
+| `navigator.camera.getPicture(win, fail, opts)` (`cordova-plugin-camera`) | `eduBridge.takePhoto()` + `window.eduBridgeOnPhotoTaken` (§5) |
+| `cordova.plugins.permissions` (`CAMERA`-Check vor Aufnahme) | entfällt (Shell holt die Berechtigung intern; kein Bridge-Aufruf) |
 
 ---
 
-## 6. Auth & Netzwerk
+## 7. Auth & Netzwerk
 
 Same-origin (WebView lädt `https://<server>/`): OAuth `POST /oauth2/token`
 (`grant_type=password`/`refresh_token`) und alle `/rest/*`-Aufrufe laufen über den normalen
