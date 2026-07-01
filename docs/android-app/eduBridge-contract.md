@@ -49,6 +49,14 @@ Zusätzlich gilt das Vorhandensein von `window.eduBridge` als verbindlicher App-
 > externe URL) — die Shell erkennt genau diesen Host und leitet stattdessen auf die
 > Server-Root um (`<serverUrl>/?<query>`), statt eine externe Browser-Seite ohne Rückweg zu
 > öffnen.
+> Außerdem stubbt der Shim `navigator.camera.getPicture()` und `cordova.plugins.permissions`
+> (Permission gilt immer als erteilt — die native Kamera-Aufnahme delegiert an die
+> System-Kamera-App und braucht keine eigene Laufzeit-Berechtigung), damit die alte
+> `CordovaService.getPhotoFromCamera()` (z. B. die Kamera-Option im Erstellen-Menü,
+> `CreateMenuComponent.openCamera()`) funktioniert — ohne den Shim wirft der
+> Permission-Check und die Aufnahme hat keinerlei Effekt. Die Aufnahme selbst läuft über
+> dieselbe bereits injizierte `window.eduBridge.takePhoto()`-Bindung wie bei einem
+> eduBridge-fähigen Frontend.
 > Neuer, eduBridge-fähiger Code **darf sich darauf nicht verlassen** —
 > `isIOS()`/`isAndroid()`/`isReallyRunningCordova()` prüfen `this.platform` (aus
 > `window.eduBridge`) immer zuerst, und `registerOnShareContent()`s `eduBridge`-Zweig kehrt
