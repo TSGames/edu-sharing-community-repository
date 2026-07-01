@@ -28,14 +28,19 @@ Mozilla/5.0 (... Android ...) edu-sharing-app/1.0.0 android
 `CordovaService.isReallyRunningCordova()` / Plattform-Erkennung greift auf diesen Marker.
 Zusätzlich gilt das Vorhandensein von `window.eduBridge` als verbindlicher App-Indikator.
 
-> **Nicht Teil dieses Vertrags:** Die native Shell injiziert zusätzlich einen minimalen
-> Kompatibilitäts-Shim (`LegacyFrontendCompat.kt` im Android-Repo), der nur `window.cordova`
-> und `window.device.platform` fakt, damit ein **noch nicht auf eduBridge aktualisiertes**
-> Server-Frontend (alte `CordovaService`, prüft `typeof window.cordova`/`window.device.platform`
-> statt `window.eduBridge`) den App-Modus trotzdem erkennt. Neuer, eduBridge-fähiger Code
-> **darf sich darauf nicht verlassen** — `isIOS()`/`isAndroid()`/`isReallyRunningCordova()`
-> prüfen `this.platform` (aus `window.eduBridge`) immer zuerst, `window.cordova`/
-> `window.device` werden nur als Fallback für alten Code gelesen. Rein transitional, für
+> **Nicht Teil dieses Vertrags:** Die native Shell injiziert zusätzlich einen
+> Kompatibilitäts-Shim (`LegacyFrontendCompat.kt` im Android-Repo) für ein **noch nicht auf
+> eduBridge aktualisiertes** Server-Frontend (alte `CordovaService`). Er fakt `window.cordova`/
+> `window.device.platform` (App-Modus-Erkennung) **und** `window.plugins.intent.{getCordovaIntent,
+> setNewIntentHandler}` plus einen wiederholten `deviceready`-Event-Dispatch, damit auch der
+> alte Share-Redirect (`router.navigate([...,'app','share'], {queryParams})`) auslöst — die
+> Shell füttert den Shim mit denselben Share-Daten, die auch über `eduBridgeOnShare`/
+> `getInitialShare()` gehen, nur ins alte `cordova-plugin-intent`-Objektformat gemappt
+> (inkl. `.stream` als base64, das `AppSharePageComponent` unverändert direkt liest).
+> Neuer, eduBridge-fähiger Code **darf sich darauf nicht verlassen** —
+> `isIOS()`/`isAndroid()`/`isReallyRunningCordova()` prüfen `this.platform` (aus
+> `window.eduBridge`) immer zuerst, und `registerOnShareContent()`s `eduBridge`-Zweig kehrt
+> zurück, bevor er den `window.plugins.intent`-Code überhaupt erreicht. Rein transitional, für
 > Versions-Skew zwischen App-Release und Server-Deployment.
 
 ---
