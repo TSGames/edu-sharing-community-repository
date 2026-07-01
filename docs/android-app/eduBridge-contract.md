@@ -28,6 +28,16 @@ Mozilla/5.0 (... Android ...) edu-sharing-app/1.0.0 android
 `CordovaService.isReallyRunningCordova()` / Plattform-Erkennung greift auf diesen Marker.
 Zusätzlich gilt das Vorhandensein von `window.eduBridge` als verbindlicher App-Indikator.
 
+> **Nicht Teil dieses Vertrags:** Die native Shell injiziert zusätzlich einen minimalen
+> Kompatibilitäts-Shim (`LegacyFrontendCompat.kt` im Android-Repo), der nur `window.cordova`
+> und `window.device.platform` fakt, damit ein **noch nicht auf eduBridge aktualisiertes**
+> Server-Frontend (alte `CordovaService`, prüft `typeof window.cordova`/`window.device.platform`
+> statt `window.eduBridge`) den App-Modus trotzdem erkennt. Neuer, eduBridge-fähiger Code
+> **darf sich darauf nicht verlassen** — `isIOS()`/`isAndroid()`/`isReallyRunningCordova()`
+> prüfen `this.platform` (aus `window.eduBridge`) immer zuerst, `window.cordova`/
+> `window.device` werden nur als Fallback für alten Code gelesen. Rein transitional, für
+> Versions-Skew zwischen App-Release und Server-Deployment.
+
 ---
 
 ## 2. JS → Native: `window.eduBridge`
