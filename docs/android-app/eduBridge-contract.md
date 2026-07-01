@@ -60,7 +60,7 @@ primitiv) zurück bzw. `void`.
 | `getAppVersion()` | `"1.0.0"` | App-Version (Diagnose, Feature-Gates). |
 | `getInitialShare()` | `string \| ""` | JSON des Share, der die App **kalt** gestartet hat, sonst leer. Beim Start einmal abrufen. |
 | `consumeShare()` | `void` | Markiert den letzten Share als verarbeitet (verhindert erneutes Feuern beim Resume). |
-| `exitApp()` | `void` | App beenden (ersetzt `navigator.app.exitApp()`). |
+| `exitApp()` | `void` | Kontextabhängig: auf der App-Login-Seite (`components/app`) setzt die Shell die gespeicherte Server-URL zurück und zeigt die native Server-Auswahl erneut; auf jeder anderen Seite beendet sie die App (ersetzt `navigator.app.exitApp()`). Die SPA gibt keine Möglichkeit, die beiden Fälle zu unterscheiden — die Shell erkennt sie an der aktuell geladenen URL. |
 | `readFile(uri)` | `string` (base64) | Optional: base64-Inhalt einer `content://`-URI nachladen, falls nicht inline geliefert. |
 | `takePhoto()` | `void` | Startet die native Kamera-Aufnahme **asynchron** (ersetzt `navigator.camera.getPicture(...)`). Kehrt sofort zurück; das Ergebnis kommt über `window.eduBridgeOnPhotoTaken` (§3/§5). Permission-Handling (`CAMERA`) übernimmt die Shell intern — kein separater Bridge-Aufruf nötig. |
 
