@@ -41,6 +41,14 @@ Zusätzlich gilt das Vorhandensein von `window.eduBridge` als verbindlicher App-
 > `window.eduBridge.exitApp()`) — ohne das bleibt z. B. der Close-Button auf der Login-Seite
 > (`AppLoginPageComponent.buttonExitApp()`) wirkungslos, weil die alte `CordovaService.exitApp()`
 > direkt `navigator.app.exitApp()` ruft, ohne `window.eduBridge` zu prüfen.
+> Separat (kein JS-Shim, sondern ein natives URL-Intercept in `MainActivity`s
+> `WebViewClient`): der Cancel-Button oben rechts auf der Login-Seite
+> (`AppLoginPageComponent.buttonLoginBack()`) ruft `CordovaService.restartCordova()`, dessen
+> alte Implementierung ohne `window.eduBridge`-Check auf
+> `http://app-registry.edu-sharing.com/ng/?reset=true...` navigiert (eine feste, serverfremde
+> externe URL) — die Shell erkennt genau diesen Host und leitet stattdessen auf die
+> Server-Root um (`<serverUrl>/?<query>`), statt eine externe Browser-Seite ohne Rückweg zu
+> öffnen.
 > Neuer, eduBridge-fähiger Code **darf sich darauf nicht verlassen** —
 > `isIOS()`/`isAndroid()`/`isReallyRunningCordova()` prüfen `this.platform` (aus
 > `window.eduBridge`) immer zuerst, und `registerOnShareContent()`s `eduBridge`-Zweig kehrt
