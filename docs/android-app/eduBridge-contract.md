@@ -36,7 +36,11 @@ Zusätzlich gilt das Vorhandensein von `window.eduBridge` als verbindlicher App-
 > alte Share-Redirect (`router.navigate([...,'app','share'], {queryParams})`) auslöst — die
 > Shell füttert den Shim mit denselben Share-Daten, die auch über `eduBridgeOnShare`/
 > `getInitialShare()` gehen, nur ins alte `cordova-plugin-intent`-Objektformat gemappt
-> (inkl. `.stream` als base64, das `AppSharePageComponent` unverändert direkt liest).
+> (inkl. `.stream` als base64, das `AppSharePageComponent` unverändert direkt liest). Zusätzlich
+> stubbt er `navigator.app.exitApp()`/`.backHistory()` (route zum bereits injizierten
+> `window.eduBridge.exitApp()`) — ohne das bleibt z. B. der Close-Button auf der Login-Seite
+> (`AppLoginPageComponent.buttonExitApp()`) wirkungslos, weil die alte `CordovaService.exitApp()`
+> direkt `navigator.app.exitApp()` ruft, ohne `window.eduBridge` zu prüfen.
 > Neuer, eduBridge-fähiger Code **darf sich darauf nicht verlassen** —
 > `isIOS()`/`isAndroid()`/`isReallyRunningCordova()` prüfen `this.platform` (aus
 > `window.eduBridge`) immer zuerst, und `registerOnShareContent()`s `eduBridge`-Zweig kehrt
