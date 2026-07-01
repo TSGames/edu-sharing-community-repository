@@ -6,7 +6,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { AuthenticationService, LoginInfo } from 'ngx-edu-sharing-api';
 import { AppService as AppServiceAbstract, DateHelper, UIConstants } from 'ngx-edu-sharing-ui';
 import { BehaviorSubject, Observable, Observer } from 'rxjs';
-import { first, map, share } from 'rxjs/operators';
+import { filter, first, map, share } from 'rxjs/operators';
 import { RestLocatorService } from '../core-module/core.module';
 import { OAuthResult } from '../core-module/rest/data-object';
 import { RestConstants } from '../core-module/rest/rest-constants';
@@ -264,22 +264,25 @@ export class CordovaService extends AppServiceAbstract {
                 this.ngZone.run(() => this.deviceResumeCallback());
             }
         };
-        // when new share contet - go to share screen
-        const shareInterval = setInterval(async () => {
-            if (await this.hasValidConfig()) {
-                clearInterval(shareInterval);
-                this.onNewShareContent().subscribe(
-                    async (data: any) => {
-                        await this.ngZone.run(() =>
-                            this.router.navigate([UIConstants.ROUTER_PREFIX, 'app', 'share'], {
-                                queryParams: data,
-                            }),
-                        );
-                    },
-                    (error) => {},
-                );
-            }
-        }, 1000);
+        // when new share content - go to share screen. Reacts the moment a valid
+        // oauth token becomes available (already logged in, or login just completed) instead
+        // of polling on a fixed 1s interval. The previous interval-based check left up to ~1s
+        // where this had not yet fired while AppLoginPageComponent's own "already logged in ->
+        // goToDefaultLocation()" redirect (also gated on oauth) could resolve first and win the
+        // navigation race, stranding a cold-started share on the default page instead of the
+        // share screen. Subscribing directly to oauth$ removes that gap.
+        this.oauth$.pipe(filter((oauth) => !!oauth), first()).subscribe(() => {
+            this.onNewShareContent().subscribe(
+                async (data: any) => {
+                    await this.ngZone.run(() =>
+                        this.router.navigate([UIConstants.ROUTER_PREFIX, 'app', 'share'], {
+                            queryParams: data,
+                        }),
+                    );
+                },
+                (error) => {},
+            );
+        });
 
         // hide the splashscreen (if still showing)
         setTimeout(() => {
