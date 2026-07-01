@@ -46,9 +46,12 @@ Zusätzlich gilt das Vorhandensein von `window.eduBridge` als verbindlicher App-
 > (`AppLoginPageComponent.buttonLoginBack()`) ruft `CordovaService.restartCordova()`, dessen
 > alte Implementierung ohne `window.eduBridge`-Check auf
 > `http://app-registry.edu-sharing.com/ng/?reset=true...` navigiert (eine feste, serverfremde
-> externe URL) — die Shell erkennt genau diesen Host und leitet stattdessen auf die
-> Server-Root um (`<serverUrl>/?<query>`), statt eine externe Browser-Seite ohne Rückweg zu
-> öffnen.
+> externe URL) — die Shell erkennt genau diesen Host. Ein reiner Reload der Server-Root wurde
+> zuerst versucht, zeigte aber nur wieder denselben (jetzt ausgeloggten) Login — stattdessen
+> läuft jetzt derselbe „anderen Server wählen"-Reset wie bei `buttonExitApp()`
+> (`ServerConfig.clear()` + `ServerUrlActivity`), statt eine externe Browser-Seite ohne
+> Rückweg zu öffnen. Beide Close/Cancel-Aktionen auf der Login-Seite verhalten sich damit
+> gleich.
 > Außerdem stubbt der Shim `navigator.camera.getPicture()` und `cordova.plugins.permissions`
 > (Permission gilt immer als erteilt — die native Kamera-Aufnahme delegiert an die
 > System-Kamera-App und braucht keine eigene Laufzeit-Berechtigung), damit die alte
