@@ -200,3 +200,18 @@ Same-origin (WebView lädt `https://<server>/`): OAuth `POST /oauth2/token`
 Angular-`HttpClient` — **kein CORS, kein nativer HTTP-Layer**. Token/Server-URL liegen in
 `localStorage`. Backend-seitig muss nur die App-`client_id`/`client_secret` in
 `TokenService.validateClient` akzeptiert werden.
+
+---
+
+## 8. Bekannte Lücken (nicht Teil des aktuellen Vertrags)
+
+> **`CordovaService.downloadContent()`** hat auf Android (eduBridge-Zweig) aktuell nur einen
+> minimalen Fix: statt des nicht existierenden `FileTransfer`/`cordova.file`-Pfads navigiert sie
+> direkt zur Download-URL, was `MainActivity`s bereits vorhandenen `setDownloadListener`
+> (→ `openExternally()`) auslöst — funktioniert, liefert aber kein echtes Erfolg/Fehler-Signal
+> (`winCallback` feuert optimistisch). Eine echte native Download-UX (Fortschritt,
+> Abschluss-Callback, Ablage im Downloads-Ordner) würde eine neue `eduBridge.downloadFile(url,
+> fileName)`-Methode auf `DownloadManager`-Basis plus einen neuen
+> `window.eduBridgeOnDownloadComplete(payloadJson)`-Callback erfordern (analog zu
+> `takePhoto()`/`eduBridgeOnPhotoTaken`) — als möglicher Fast-Follow vermerkt, nicht Teil dieses
+> Vertrags.

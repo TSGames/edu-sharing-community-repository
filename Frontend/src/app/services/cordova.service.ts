@@ -1130,6 +1130,24 @@ export class CordovaService extends AppServiceAbstract {
         winCallback: Function = null,
         failCallback: Function = null,
     ): void {
+        if ((window as any).eduBridge) {
+            if (downloadURL.indexOf('accessToken=') < 0 && this.oauth !== null) {
+                downloadURL +=
+                    (downloadURL.indexOf('?') < 0 ? '?' : '&') +
+                    'accessToken=' +
+                    this.oauth.access_token;
+            }
+            // No FileTransfer/cordova.file plugin exists in this shell; MainActivity's
+            // WebView already has a setDownloadListener that hands a
+            // Content-Disposition:attachment response to openExternally() -- a real
+            // navigation triggers it exactly like a normal browser download would. There's no
+            // completion/failure signal available this way (winCallback fires optimistically);
+            // a real DownloadManager-backed eduBridge method would be needed for genuine
+            // completion feedback -- see eduBridge-contract.md for that deferred option.
+            window.location.href = downloadURL;
+            if (winCallback) winCallback();
+            return;
+        }
         let status = 0;
         let resultPath = '';
         try {
@@ -1235,6 +1253,15 @@ export class CordovaService extends AppServiceAbstract {
     }
 
     openInAppBrowser(url: string) {
+        if ((window as any).eduBridge) {
+            // No InAppBrowser plugin exists in this shell; MainActivity's
+            // shouldOverrideUrlLoading already keeps same-origin navigation inside the
+            // WebView and hands external http(s) URLs to the system (openExternally()) -- so
+            // just navigate and let that do the routing (same eduBridge-first pattern as
+            // exitApp()/restartCordova() above).
+            window.location.href = url;
+            return;
+        }
         let params: string;
         if (this.isAndroid()) {
             params = 'location=no,zoom=no';
@@ -1327,6 +1354,13 @@ export class CordovaService extends AppServiceAbstract {
         return win;
     }
     openBrowser(url: string) {
+        if ((window as any).eduBridge) {
+            // No '_system' window handling exists in this shell's WebView. Best-effort, not
+            // guaranteed-external on Android: same-host URLs still resolve inside the WebView
+            // via MainActivity's shouldOverrideUrlLoading, same as openInAppBrowser() above.
+            window.location.href = url;
+            return;
+        }
         window.open(url, '_system');
     }
     /**********************************************************
