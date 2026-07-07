@@ -6,7 +6,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { AuthenticationService, LoginInfo } from 'ngx-edu-sharing-api';
 import { AppService as AppServiceAbstract, DateHelper, UIConstants } from 'ngx-edu-sharing-ui';
 import { BehaviorSubject, Observable, Observer } from 'rxjs';
-import { first, map, share } from 'rxjs/operators';
+import { filter, first, map, share } from 'rxjs/operators';
 import { RestLocatorService } from '../core-module/core.module';
 import { OAuthResult } from '../core-module/rest/data-object';
 import { RestConstants } from '../core-module/rest/rest-constants';
@@ -94,35 +94,25 @@ export class CordovaService extends AppServiceAbstract {
     ) {
         super();
         const userAgent = navigator.userAgent;
-        if (userAgent?.includes('ionic / edu-sharing-app')) {
-            if (userAgent.includes('ios')) {
-                this.platform = 'ios';
+        const eduBridge = (window as any).eduBridge;
+        if (eduBridge || userAgent?.includes('edu-sharing-app')) {
+            // Native shell (Android stage 1; iOS stage 2) injects window.eduBridge and serves
+            // the live SPA from the server (same-origin). No app-registry cordova.js loading and
+            // no Cordova plugin runtime — the bridge replaces it (see docs/android-app/eduBridge-contract.md).
+            let platform: 'ios' | 'android' = userAgent.includes('ios') ? 'ios' : 'android';
+            try {
+                const bridgePlatform = eduBridge?.getPlatform?.();
+                if (bridgePlatform === 'ios' || bridgePlatform === 'android') {
+                    platform = bridgePlatform;
+                }
+            } catch (e) {
+                console.warn('eduBridge.getPlatform failed', e);
             }
-            if (userAgent.includes('android')) {
-                this.platform = 'android';
+            this.platform = platform;
+            // the bridge is injected synchronously by the native WebView -> ready immediately
+            if (eduBridge) {
+                this.deviceIsReady = true;
             }
-            const splitted = userAgent.split('/');
-            const version =
-                splitted
-                    .filter((s) => {
-                        const versionRegExp = new RegExp('\\d\\.\\d(\\.\\d)?');
-                        if (versionRegExp.test(s.trim())) {
-                            return true;
-                        }
-                        return false;
-                    })?.[0]
-                    .trim() || '0.0.0';
-
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src =
-                'https://app-registry.edu-sharing.com/js/' +
-                version +
-                '/' +
-                this.platform +
-                '/cordova.js';
-            document.getElementsByTagName('head')[0].appendChild(script);
-            console.info('ionic user agent, add cordova.js to header', this.platform, version);
         }
         this.initialHref = window.location.href;
 
@@ -148,14 +138,18 @@ export class CordovaService extends AppServiceAbstract {
 
         if (this.isRunningCordova()) {
             this.registerSessionListener();
-            // deviceready may not work, because cordova is already loaded, so try to set it ready after some time
-            const checkInterval = setInterval(() => {
-                if ((window as any).plugins) {
-                    console.info('cordova: plugins object found, setting device ready');
-                    this.deviceIsReady = true;
-                    clearInterval(checkInterval);
-                }
-            }, 100);
+            // legacy Cordova plugin runtime detection — skipped for the native eduBridge shell,
+            // which sets deviceIsReady synchronously above.
+            if (!(window as any).eduBridge) {
+                // deviceready may not work, because cordova is already loaded, so try to set it ready after some time
+                const checkInterval = setInterval(() => {
+                    if ((window as any).plugins) {
+                        console.info('cordova: plugins object found, setting device ready');
+                        this.deviceIsReady = true;
+                        clearInterval(checkInterval);
+                    }
+                }, 100);
+            }
         }
         // adding listener for cordova events
         document.addEventListener(
@@ -225,6 +219,10 @@ export class CordovaService extends AppServiceAbstract {
     private serviceIsReady = false;
 
     private lastIntent: any;
+    private pendingCameraCallbacks: {
+        successCallback: (data: string) => void;
+        errorCallback: Function;
+    } | null = null;
 
     initialHref: string;
 
@@ -259,22 +257,32 @@ export class CordovaService extends AppServiceAbstract {
 
         // --> navigation issues exist anyway, need to check that later
         document.addEventListener('backbutton', () => this.onBackKeyDown(), false);
-        // when new share contet - go to share screen
-        const shareInterval = setInterval(async () => {
-            if (await this.hasValidConfig()) {
-                clearInterval(shareInterval);
-                this.onNewShareContent().subscribe(
-                    async (data: any) => {
-                        await this.ngZone.run(() =>
-                            this.router.navigate([UIConstants.ROUTER_PREFIX, 'app', 'share'], {
-                                queryParams: data,
-                            }),
-                        );
-                    },
-                    (error) => {},
-                );
+        // native shell (eduBridge) delivers back/resume via global callbacks
+        (window as any).eduBridgeOnBack = () => this.ngZone.run(() => this.onBackKeyDown());
+        (window as any).eduBridgeOnResume = () => {
+            if (this.deviceResumeCallback != null) {
+                this.ngZone.run(() => this.deviceResumeCallback());
             }
-        }, 1000);
+        };
+        // when new share content - go to share screen. Reacts the moment a valid
+        // oauth token becomes available (already logged in, or login just completed) instead
+        // of polling on a fixed 1s interval. The previous interval-based check left up to ~1s
+        // where this had not yet fired while AppLoginPageComponent's own "already logged in ->
+        // goToDefaultLocation()" redirect (also gated on oauth) could resolve first and win the
+        // navigation race, stranding a cold-started share on the default page instead of the
+        // share screen. Subscribing directly to oauth$ removes that gap.
+        this.oauth$.pipe(filter((oauth) => !!oauth), first()).subscribe(() => {
+            this.onNewShareContent().subscribe(
+                async (data: any) => {
+                    await this.ngZone.run(() =>
+                        this.router.navigate([UIConstants.ROUTER_PREFIX, 'app', 'share'], {
+                            queryParams: data,
+                        }),
+                    );
+                },
+                (error) => {},
+            );
+        });
 
         // hide the splashscreen (if still showing)
         setTimeout(() => {
@@ -309,6 +317,31 @@ export class CordovaService extends AppServiceAbstract {
         });
     }
     public getFileAsBlob(file: string, mimetype: string) {
+        const eduBridge = (window as any).eduBridge;
+        if (eduBridge) {
+            return new Observable<Blob>((observer: Observer<Blob>) => {
+                try {
+                    // prefer the base64 already delivered with the share, else read on demand
+                    const base64: string =
+                        this.lastIntent?.stream ?? eduBridge.readFile?.(file) ?? '';
+                    if (!base64) {
+                        observer.error('eduBridge: empty file content');
+                        observer.complete();
+                        return;
+                    }
+                    const byteChars = atob(base64);
+                    const bytes = new Uint8Array(byteChars.length);
+                    for (let i = 0; i < byteChars.length; i++) {
+                        bytes[i] = byteChars.charCodeAt(i);
+                    }
+                    observer.next(new Blob([bytes], { type: mimetype }));
+                    observer.complete();
+                } catch (e) {
+                    observer.error(e);
+                    observer.complete();
+                }
+            });
+        }
         return new Observable<Blob>((observer: Observer<Blob>) => {
             (window as any).resolveLocalFileSystemURL(
                 file,
@@ -327,6 +360,51 @@ export class CordovaService extends AppServiceAbstract {
     }
     private registerOnShareContent(): void {
         console.info('registerOnShareContent', this.platform, this.isAndroid());
+        const eduBridge = (window as any).eduBridge;
+        if (eduBridge) {
+            // Native shell delivers shares via window.eduBridge (see eduBridge-contract.md).
+            const emit = (payload: any) => {
+                if (!payload) {
+                    return;
+                }
+                // deep link: open the target url in the same WebView (NgServlet route)
+                if (payload.action === 'VIEW' && payload.uri) {
+                    window.location.href = payload.uri;
+                    return;
+                }
+                this.lastIntent = payload; // carries .stream (base64) for file shares
+                const isFile =
+                    !!payload.stream ||
+                    (typeof payload.uri === 'string' &&
+                        (payload.uri.startsWith('content://') ||
+                            payload.uri.startsWith('file://')));
+                this.observerShareContent.next({
+                    // file share -> content uri; link/text share -> the shared text/url
+                    uri: isFile ? payload.uri : payload.text ?? payload.uri,
+                    file: payload.fileName ?? null,
+                    mimetype: payload.mimetype,
+                    text: payload.text,
+                });
+            };
+            // shares arriving while the app is running (warm start)
+            (window as any).eduBridgeOnShare = (json: string) => {
+                try {
+                    this.ngZone.run(() => emit(JSON.parse(json)));
+                } catch (e) {
+                    console.warn('eduBridgeOnShare parse failed', e);
+                }
+            };
+            // share that cold-started the app
+            try {
+                const initial = eduBridge.getInitialShare?.();
+                if (initial) {
+                    emit(JSON.parse(initial));
+                }
+            } catch (e) {
+                console.warn('eduBridge.getInitialShare failed', e);
+            }
+            return;
+        }
         if (this.isAndroid()) {
             const handleIntentBase = (intent: any) => {
                 if (intent && intent.extras) {
@@ -487,6 +565,9 @@ export class CordovaService extends AppServiceAbstract {
      * https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-device/index.html
      */
     isIOS(): boolean {
+        if (this.platform) {
+            return this.platform === 'ios';
+        }
         try {
             const device: any = (window as any).device;
             return device.platform == 'iOS';
@@ -500,6 +581,9 @@ export class CordovaService extends AppServiceAbstract {
      * https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-device/index.html
      */
     isAndroid(): boolean {
+        if (this.platform) {
+            return this.platform === 'android';
+        }
         try {
             const device: any = (window as any).device;
             return (
@@ -555,6 +639,11 @@ export class CordovaService extends AppServiceAbstract {
      * Closes the App when running as real app.
      */
     exitApp() {
+        const eduBridge = (window as any).eduBridge;
+        if (eduBridge?.exitApp) {
+            eduBridge.exitApp();
+            return;
+        }
         try {
             (navigator as any).app.exitApp();
         } catch (e) {}
@@ -563,6 +652,11 @@ export class CordovaService extends AppServiceAbstract {
     restartCordova(parameters = ''): void {
         this.setPermanentStorage(RestConstants.CORDOVA_STORAGE_OAUTHTOKENS, null);
         if (parameters) parameters = '&' + parameters;
+        if ((window as any).eduBridge) {
+            // remote-WebView shell: reload the server origin; the SPA handles login/server selection
+            window.location.replace(window.location.origin + '/?reset=true' + parameters);
+            return;
+        }
         if (navigator.userAgent.includes('ionic / edu-sharing-app')) {
             // go to ionic local server
             if (this.isAndroid() && navigator.userAgent.includes('3.0.1')) {
@@ -935,6 +1029,41 @@ export class CordovaService extends AppServiceAbstract {
         errorCallback: Function,
         options: any = null,
     ): void {
+        const eduBridge = (window as any).eduBridge;
+        if (eduBridge?.takePhoto) {
+            // Native shell delivers the capture asynchronously via eduBridgeOnPhotoTaken
+            // (see eduBridge-contract.md §5) — a camera capture can take arbitrarily long,
+            // so the bridge does not block JS execution like the other sync methods do.
+            if (this.pendingCameraCallbacks) {
+                errorCallback('FAIL-BUSY', 'a photo capture is already in progress');
+                return;
+            }
+            this.pendingCameraCallbacks = { successCallback, errorCallback };
+            (window as any).eduBridgeOnPhotoTaken = (json: string) => {
+                const callbacks = this.pendingCameraCallbacks;
+                this.pendingCameraCallbacks = null;
+                if (!callbacks) {
+                    return;
+                }
+                try {
+                    const payload = JSON.parse(json);
+                    if (payload?.success) {
+                        callbacks.successCallback(payload.stream);
+                    } else {
+                        callbacks.errorCallback('FAIL-PLUGIN', payload?.error ?? 'unknown error');
+                    }
+                } catch (e) {
+                    callbacks.errorCallback('FAIL-PARSE', e);
+                }
+            };
+            try {
+                eduBridge.takePhoto();
+            } catch (e) {
+                this.pendingCameraCallbacks = null;
+                errorCallback('FAIL-EXCEPTION', e);
+            }
+            return;
+        }
         try {
             // Default Options
             if (options == null)
@@ -1001,6 +1130,24 @@ export class CordovaService extends AppServiceAbstract {
         winCallback: Function = null,
         failCallback: Function = null,
     ): void {
+        if ((window as any).eduBridge) {
+            if (downloadURL.indexOf('accessToken=') < 0 && this.oauth !== null) {
+                downloadURL +=
+                    (downloadURL.indexOf('?') < 0 ? '?' : '&') +
+                    'accessToken=' +
+                    this.oauth.access_token;
+            }
+            // No FileTransfer/cordova.file plugin exists in this shell; MainActivity's
+            // WebView already has a setDownloadListener that hands a
+            // Content-Disposition:attachment response to openExternally() -- a real
+            // navigation triggers it exactly like a normal browser download would. There's no
+            // completion/failure signal available this way (winCallback fires optimistically);
+            // a real DownloadManager-backed eduBridge method would be needed for genuine
+            // completion feedback -- see eduBridge-contract.md for that deferred option.
+            window.location.href = downloadURL;
+            if (winCallback) winCallback();
+            return;
+        }
         let status = 0;
         let resultPath = '';
         try {
@@ -1106,6 +1253,15 @@ export class CordovaService extends AppServiceAbstract {
     }
 
     openInAppBrowser(url: string) {
+        if ((window as any).eduBridge) {
+            // No InAppBrowser plugin exists in this shell; MainActivity's
+            // shouldOverrideUrlLoading already keeps same-origin navigation inside the
+            // WebView and hands external http(s) URLs to the system (openExternally()) -- so
+            // just navigate and let that do the routing (same eduBridge-first pattern as
+            // exitApp()/restartCordova() above).
+            window.location.href = url;
+            return;
+        }
         let params: string;
         if (this.isAndroid()) {
             params = 'location=no,zoom=no';
@@ -1198,6 +1354,13 @@ export class CordovaService extends AppServiceAbstract {
         return win;
     }
     openBrowser(url: string) {
+        if ((window as any).eduBridge) {
+            // No '_system' window handling exists in this shell's WebView. Best-effort, not
+            // guaranteed-external on Android: same-host URLs still resolve inside the WebView
+            // via MainActivity's shouldOverrideUrlLoading, same as openInAppBrowser() above.
+            window.location.href = url;
+            return;
+        }
         window.open(url, '_system');
     }
     /**********************************************************
@@ -1421,7 +1584,7 @@ export class CordovaService extends AppServiceAbstract {
         } // if(window.history.length>2) {
         // (navigator as any).app.backHistory();
         else if (this.onBackBehaviour === OnBackBehaviour.closeApp) {
-            (navigator as any).app.exitApp();
+            this.exitApp();
         } else {
             this.location.back();
         }
