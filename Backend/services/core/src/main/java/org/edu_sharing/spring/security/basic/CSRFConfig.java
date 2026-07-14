@@ -36,24 +36,9 @@ public class CSRFConfig {
                     .sessionAuthenticationStrategy(eduSessionAuthenticationStrategy)
                     .csrfTokenRepository(tokenRepository)
                     .csrfTokenRequestHandler(requestHandler)
-                    .ignoringRequestMatchers(CSRFConfig::isInternalPortRequest));
+                    .ignoringRequestMatchers(ApplicationInfoList::isInternalPortRequest));
         }
         return http;
-    }
-
-    /**
-     * A request that did not arrive on the configured home repository port bypassed the public
-     * reverse proxy (e.g. a service calling the internal Tomcat port such as 8080 directly) and is
-     * treated as trusted internal traffic, exempt from CSRF - analogous to the internal-port 2FA
-     * bypass in ApiAuthenticationFilter.
-     */
-    private static boolean isInternalPortRequest(HttpServletRequest request) {
-        try {
-            int homePort = Integer.parseInt(ApplicationInfoList.getHomeRepository().getPort());
-            return request.getLocalPort() != homePort;
-        } catch (NumberFormatException e) {
-            return false;
-        }
     }
 
     public static void csrfInitCookie(HttpServletRequest request, HttpServletResponse response){
