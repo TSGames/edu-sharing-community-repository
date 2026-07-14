@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.edu_sharing.alfresco.lightbend.LightbendConfigLoader;
+import org.edu_sharing.repository.server.tools.ApplicationInfoList;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.Authentication;
@@ -34,9 +35,25 @@ public class CSRFConfig {
             http.csrf((csrf) -> csrf
                     .sessionAuthenticationStrategy(eduSessionAuthenticationStrategy)
                     .csrfTokenRepository(tokenRepository)
-                    .csrfTokenRequestHandler(requestHandler));
+                    .csrfTokenRequestHandler(requestHandler)
+                    .ignoringRequestMatchers(CSRFConfig::isInternalPortRequest));
         }
         return http;
+    }
+
+    /**
+     * A request that did not arrive on the configured home repository port bypassed the public
+     * reverse proxy (e.g. a service calling the internal Tomcat port such as 8080 directly) and is
+     * treated as trusted internal traffic, exempt from CSRF - analogous to the internal-port 2FA
+     * bypass in ApiAuthenticationFilter.
+     */
+    private static boolean isInternalPortRequest(HttpServletRequest request) {
+        try {
+            int homePort = Integer.parseInt(ApplicationInfoList.getHomeRepository().getPort());
+            return request.getLocalPort() != homePort;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     public static void csrfInitCookie(HttpServletRequest request, HttpServletResponse response){
