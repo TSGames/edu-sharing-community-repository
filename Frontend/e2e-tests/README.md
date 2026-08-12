@@ -1,6 +1,20 @@
 # Mock e2e suite
 
-Playwright scenarios that run the built frontend against the [mock backend](../mock-backend/README.md)
+Everything needed to validate the frontend without a real repository lives in this directory:
+
+```
+e2e-tests/
+  playwright.config.ts     configuration of the suite
+  tsconfig.json            compiles tests/ -> build/tests
+  tests/                   fixtures, page objects, scenarios
+  __screenshots__/         committed baselines, per project
+  mock-backend/            the REST/asset mock (see its own README)
+  scripts/                 baseline recording in the pinned container
+  build/                   compiled output + unmocked.log (git-ignored)
+  test-results/, report/   run artifacts (git-ignored)
+```
+
+Playwright scenarios run the built frontend against the [mock backend](mock-backend/README.md)
 and compare screenshots against committed baselines. This suite runs in **every** CI build
 (GitLab job `e2e mock`), unlike `../tests/`, which needs a real repository and is gated behind
 `$E2E_TEST`.
@@ -9,8 +23,8 @@ and compare screenshots against committed baselines. This suite runs in **every*
 
 ```
 npm run e2e:mock:prepare   # once: build libraries, app (dist-mock/) and mock backend
-npm run e2e:mock           # compiles tests-mock/ and runs the suite
-npx playwright show-report playwright-report-mock
+npm run e2e:mock           # compiles tests/ and runs the suite
+npx playwright show-report e2e-tests/report
 ```
 
 `npm run e2e:mock` starts the mock backend itself (Playwright `webServer`); no separate terminal is
@@ -18,7 +32,7 @@ needed. `npm run mock-backend` beforehand is fine too — an already running ser
 
 ## Screenshots
 
-Baselines live in `tests-mock/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.
+Baselines live in `e2e-tests/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.
 Every scenario runs in two projects, so each screenshot exists twice:
 
 | Project | Viewport | Covers |
@@ -50,7 +64,7 @@ recorded.
 
 ## What makes the run deterministic
 
-`fixtures.ts` sets all of this up before the first navigation:
+`tests/fixtures.ts` sets all of this up before the first navigation:
 
 * language `none`, pinned twice: the `locale=none` query parameter *and* the `language` key in
   localStorage plus the mocked user preferences. The query parameter alone is applied only after
@@ -61,7 +75,7 @@ recorded.
 * requests to any host other than the mock are aborted
 * fixed viewport per project, browser locale `de-DE`, timezone `UTC`, `colorScheme: light`,
   reduced motion
-* `screenshot.css` disables animations, transitions, carets, ripples and scrollbars
+* `tests/screenshot.css` disables animations, transitions, carets, ripples and scrollbars
 * all scroll positions are reset - node lists keep an internal scroll offset across navigations,
   which otherwise shifts a whole table by one row between runs
 
@@ -78,10 +92,10 @@ implement (HTTP 501).
 
 ## Adding a scenario
 
-1. Add a spec under `scenarios/`, using the helpers from `../fixtures` (`test`, `settle`,
+1. Add a spec under `tests/scenarios/`, using the helpers from `../fixtures` (`test`, `settle`,
    `expectScreenshot`) and `../pages/app.page.ts`. It has to hold up in **both** projects - do not
    assert on elements of the main nav (the scope button is hidden on mobile), use
    `app.expectPageShell()` and content assertions instead.
 2. If new REST endpoints are needed, implement them in the mock backend — `npm run e2e:mock` tells
    you which ones are missing.
-3. Record the baselines with `./scripts/e2e-mock-docker.sh --update-snapshots` and commit them.
+3. Record the baselines with `npm run e2e:mock:update:docker` and commit them.

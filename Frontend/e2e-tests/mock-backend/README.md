@@ -14,7 +14,7 @@ Credentials: `e2e` / `e2e` (or `admin` / `admin`). Everything else is rejected.
 ## Why a custom server
 
 * **Deterministic.** Every timestamp, id and list order is fixed, which is what makes the
-  screenshot baselines of `tests-mock/` comparable. A schema-driven mock (Prism) would generate
+  screenshot baselines of the suite comparable. A schema-driven mock (Prism) would generate
   changing sample data.
 * **Stateful where it matters.** Login/logout and user preferences are real session state, so the
   login flow can be tested end to end.
@@ -27,7 +27,7 @@ Credentials: `e2e` / `e2e` (or `admin` / `admin`). Everything else is rejected.
 
 | Path | Purpose |
 | --- | --- |
-| `src/index.ts` | entry point |
+| `src/index.ts` | entry point (compiled to `../build/mock-backend/index.js`) |
 | `src/server.ts` | HTTP handling: REST router, static assets, SPA fallback, miss logging |
 | `src/router.ts` | small path router (`:param`, trailing `*`) |
 | `src/session.ts` | cookie session + the accepted credentials |
@@ -39,7 +39,7 @@ Credentials: `e2e` / `e2e` (or `admin` / `admin`). Everything else is rejected.
 ## Unmocked endpoints
 
 Anything under `/edu-sharing/rest` without a route answers **501** and is recorded in
-`mock-backend/out/unmocked.log` (also a CI artifact). The Playwright suite fails when a test
+`e2e-tests/build/unmocked.log` (also a CI artifact). The Playwright suite fails when a test
 triggers a 501, so a new frontend feature that needs a new endpoint shows up immediately instead of
 silently rendering an error state.
 

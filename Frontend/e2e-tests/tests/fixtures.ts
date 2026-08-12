@@ -112,7 +112,7 @@ export async function settle(page: Page): Promise<void> {
  * Compares a screenshot against the committed baseline.
  *
  * When no baseline exists yet the comparison is skipped with a warning instead of failing, so a
- * new scenario can be merged before its baseline is generated (see `tests-mock/README.md`).
+ * new scenario can be merged before its baseline is generated (see `e2e-tests/README.md`).
  * Set `E2E_MOCK_REQUIRE_BASELINES=1` to make a missing baseline a hard error.
  */
 export async function expectScreenshot(

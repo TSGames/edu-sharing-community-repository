@@ -1,6 +1,8 @@
 import * as path from 'path';
 
-const frontendDir = path.resolve(__dirname, '..', '..');
+// Compiled location: Frontend/e2e-tests/build/mock-backend
+const e2eDir = path.resolve(__dirname, '..', '..');
+const frontendDir = path.resolve(e2eDir, '..');
 
 function env(name: string, fallback: string): string {
     const value = process.env[name];
@@ -14,11 +16,11 @@ export const config = {
     /** Directory of the Angular build output that is served under `/edu-sharing`. */
     distDir: path.resolve(frontendDir, env('MOCK_DIST_DIR', 'dist-mock')),
     /** Static placeholder assets (themes, preview images, license icons). */
-    assetsDir: path.resolve(__dirname, '..', '..', 'mock-backend', 'assets'),
+    assetsDir: path.resolve(e2eDir, 'mock-backend', 'assets'),
     /** Serve only the REST API, e.g. when the app itself is served by `ng serve`. */
     apiOnly: process.argv.includes('--api-only') || env('MOCK_API_ONLY', '') === '1',
     /** Where unmocked REST requests are recorded. */
-    unmockedLog: path.resolve(__dirname, '..', 'out', 'unmocked.log'),
+    unmockedLog: path.resolve(e2eDir, 'build', 'unmocked.log'),
     /**
      * Every timestamp the mock returns. Keeping this fixed is what makes relative dates
      * ("modified 2 days ago") stable across runs and therefore screenshot-comparable.

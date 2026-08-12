@@ -4,7 +4,7 @@ import { devices } from '@playwright/test';
 /**
  * Playwright configuration for the mock-backend suite.
  *
- * Separate from `playwright.config.ts` on purpose: that one targets a real edu-sharing instance
+ * Separate from `../playwright.config.ts` on purpose: that one targets a real edu-sharing instance
  * (its `globalSetup` logs in against a live backend) and records trace/video/screenshots for every
  * test, which is the wrong trade-off for pixel comparisons.
  *
@@ -20,11 +20,11 @@ const chromiumLaunchOptions = {
 };
 
 const config: PlaywrightTestConfig = {
-    // Compiled output of `tests-mock` (see `npm run pree2e:mock`).
-    testDir: './playwright/out-mock/tests-mock/scenarios',
-    outputDir: './playwright/test-results-mock',
+    // Compiled output of `tests/` (see `npm run pree2e:mock`).
+    testDir: './build/tests/scenarios',
+    outputDir: './test-results',
     // Resolved relative to this file, i.e. baselines live in the sources and are committed.
-    snapshotPathTemplate: './tests-mock/__screenshots__/{projectName}/{testFileName}/{arg}{ext}',
+    snapshotPathTemplate: './__screenshots__/{projectName}/{testFileName}/{arg}{ext}',
     timeout: 60_000,
     expect: {
         timeout: 15_000,
@@ -32,7 +32,7 @@ const config: PlaywrightTestConfig = {
             animations: 'disabled',
             caret: 'hide',
             scale: 'css',
-            stylePath: './tests-mock/screenshot.css',
+            stylePath: './tests/screenshot.css',
             maxDiffPixelRatio: 0.002,
         },
     },
@@ -43,8 +43,8 @@ const config: PlaywrightTestConfig = {
     forbidOnly: isCi,
     reporter: [
         ['list'],
-        ['html', { outputFolder: 'playwright-report-mock', open: 'never' }],
-        ['junit', { outputFile: 'playwright-report-mock/junit.xml' }],
+        ['html', { outputFolder: './report', open: 'never' }],
+        ['junit', { outputFile: './report/junit.xml' }],
     ],
     use: {
         baseURL: 'http://127.0.0.1:4200/edu-sharing/',
@@ -81,7 +81,8 @@ const config: PlaywrightTestConfig = {
         },
     ],
     webServer: {
-        command: 'node mock-backend/out/index.js',
+        // `cwd` of a webServer command is the directory of this config file.
+        command: 'node build/mock-backend/index.js',
         url: 'http://127.0.0.1:4200/edu-sharing/index.html',
         reuseExistingServer: !isCi,
         timeout: 120_000,

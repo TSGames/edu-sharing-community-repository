@@ -5,8 +5,8 @@
         "module": "commonjs",
         "moduleResolution": "node",
         "sourceMap": true,
-        "rootDir": "..",
-        "outDir": "../playwright/out-mock",
+        "rootDir": "./tests",
+        "outDir": "./build/tests",
         "lib": ["es2022", "DOM", "DOM.Iterable"],
         "types": ["node"],
         "typeRoots": ["../node_modules/@types"],
@@ -14,5 +14,5 @@
         "strict": true,
         "skipLibCheck": true
     },
-    "include": ["**/*.ts"]
+    "include": ["tests/**/*.ts"]
 }
