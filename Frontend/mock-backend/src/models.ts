@@ -64,6 +64,7 @@ export interface PrimaryLogin {
     statusCode?: string;
     toolPermissions?: string[];
     userHome?: string;
+    oauthEntries?: { name: string; clientId?: string; allowThirdPartyLoginPlugin?: boolean }[];
     remoteAuthentications?: { [key: string]: unknown };
 }
 
@@ -244,7 +245,8 @@ export interface Node {
     modifiedAt?: string;
     modifiedBy?: Person;
     iconURL?: string;
-    icon?: { name?: string; color?: string };
+    downloadUrl?: string;
+    icon?: { url?: string; fontGlyphId?: string };
     preview?: Preview;
     content?: { url?: string; version?: string; hash?: string };
     license?: { icon?: string; url?: string };
@@ -294,6 +296,19 @@ export interface SearchResultNode {
     pagination: Pagination;
     facets: Facet[];
     ignored?: string[];
+}
+
+/** A node inside a collection - carries the id of the node it references. */
+export interface CollectionReference extends Node {
+    originalId?: string;
+    accessOriginal?: string[];
+    accessEffective?: string[];
+    originalRestrictedAccess?: boolean;
+}
+
+export interface ReferenceEntries {
+    references: CollectionReference[];
+    pagination?: Pagination;
 }
 
 export interface CollectionEntries {

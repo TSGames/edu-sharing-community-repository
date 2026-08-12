@@ -18,7 +18,6 @@ export interface MockFixtures {
  * The test object used by every mock scenario.
  *
  * It applies everything that has to be in place *before* the first navigation:
- * - a fixed clock, so relative dates ("vor 2 Tagen") never change,
  * - a seeded `Math.random`, so anything id- or shuffle-based is stable,
  * - dismissed tutorials, so no overlay covers the page,
  * - guards that turn unmocked endpoints (HTTP 501) and console errors into test failures.
@@ -44,9 +43,10 @@ export const test = base.extend<MockFixtures>({
             }
         });
 
-        // Time is frozen via `setFixedTime` rather than `clock.install()`: installing fake timers
-        // stalls zone.js-driven change detection and the app never finishes loading.
-        await page.clock.setFixedTime(new Date('2024-01-01T12:00:00Z'));
+        // No `page.clock` here - neither `install()` nor `setFixedTime()` work with this app:
+        // it measures elapsed time via `Date.now()` differences, so a frozen clock leaves the
+        // loading screen up forever. Determinism of dates comes from the fixed timestamps in the
+        // mock fixtures instead; anything that renders a *relative* date must be masked.
         await page.addInitScript(() => {
             let seed = 42;
             Math.random = () => {
@@ -75,11 +75,28 @@ export const test = base.extend<MockFixtures>({
 
 export { expect };
 
+/** Animated element that must never end up in a baseline. */
+export const PROGRESS_BAR = '.mat-mdc-progress-bar';
+
 /** Waits until the page is visually settled: no spinner, no pending request, fonts loaded. */
 export async function settle(page: Page): Promise<void> {
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('.mat-mdc-progress-bar, es-spinner')).toHaveCount(0);
+    // Generous timeout: the very first navigation of a worker also pays for loading all lazy
+    // chunks of the application bundle.
+    await expect(page.locator('[data-test="loading-spinner"]')).toHaveCount(0, { timeout: 45_000 });
+    // The main nav progress bar is not a reliable idle signal - it stays visible on some pages
+    // even after all requests finished. It is masked in screenshots instead (see `PROGRESS_BAR`).
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    // Reset every scroll position: node lists keep an internal scroll offset that survives
+    // navigation, which would otherwise shift a whole table by one row between runs.
+    await page.evaluate(() => {
+        window.scrollTo(0, 0);
+        document.querySelectorAll('*').forEach((element) => {
+            if (element.scrollTop) {
+                element.scrollTop = 0;
+            }
+        });
+    });
     // One more frame so Material has finished its layout pass.
     await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),

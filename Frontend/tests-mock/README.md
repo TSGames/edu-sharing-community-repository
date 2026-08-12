@@ -8,9 +8,8 @@ and compare screenshots against committed baselines. This suite runs in **every*
 ## Running locally
 
 ```
-npm run prebuild        # once: build the libraries
-npm run build:mock      # Angular build -> dist-mock/
-npm run e2e:mock        # compiles tests-mock/ and runs the suite
+npm run e2e:mock:prepare   # once: build libraries, app (dist-mock/) and mock backend
+npm run e2e:mock           # compiles tests-mock/ and runs the suite
 npx playwright show-report playwright-report-mock
 ```
 
@@ -25,8 +24,11 @@ Rendering depends on the browser build and the installed fonts, so baselines are
 they were recorded in the same image CI uses:
 
 ```
-./scripts/e2e-mock-docker.sh --update-snapshots
+npm run e2e:mock:update:docker     # = ./scripts/e2e-mock-docker.sh --update-snapshots
 ```
+
+`npm run e2e:mock:update` does the same on the host - only use it when your local browser comes
+from the same Playwright version as the pinned image, otherwise the baselines will not match CI.
 
 Commit the updated PNGs **together with the UI change that caused them** — the image diff is what
 makes a visual change reviewable.
@@ -40,13 +42,21 @@ recorded.
 
 `fixtures.ts` sets all of this up before the first navigation:
 
-* fixed clock (`page.clock.setFixedTime`) — relative dates never move.
-  `clock.install()` is deliberately *not* used: fake timers stall zone.js change detection.
 * seeded `Math.random`
 * tutorials dismissed via `localStorage`
 * requests to any host other than the mock are aborted
 * fixed viewport, locale `de-DE`, timezone `UTC`, `colorScheme: light`, reduced motion
 * `screenshot.css` disables animations, transitions, carets, ripples and scrollbars
+* all scroll positions are reset - node lists keep an internal scroll offset across navigations,
+  which otherwise shifts a whole table by one row between runs
+
+**No `page.clock`.** Neither `install()` nor `setFixedTime()` can be used: the application measures
+elapsed time through `Date.now()` differences and never leaves its loading screen with a frozen
+clock. Date stability comes from the fixed timestamps of the mock fixtures instead - anything
+rendering a *relative* date has to be masked.
+
+The main nav progress bar stays visible on some pages even when everything has loaded. It is
+therefore not part of the idle check and is masked in full-page screenshots (`PROGRESS_BAR`).
 
 Additionally, every test fails when the page logs an error or hits an endpoint the mock does not
 implement (HTTP 501).

@@ -41,8 +41,12 @@ export class AppPage {
         return this.page.locator('[role="listitem"]', { hasText: pattern });
     }
 
+    /**
+     * The page's content area - the search page marks it with `.main-content`, workspace and
+     * collections with `role="main"`.
+     */
     get mainContent(): Locator {
-        return this.page.locator('[role="main"]').first();
+        return this.page.locator('[role="main"], .main-content').first();
     }
 
     async searchInTopBar(term: string): Promise<void> {

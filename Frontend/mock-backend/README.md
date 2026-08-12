@@ -5,9 +5,8 @@ It serves the built Angular application **and** a fixed set of REST responses fr
 the frontend can be validated in CI without Alfresco, Elasticsearch or Docker.
 
 ```
-npm run prebuild        # once: build the libraries
-npm run build:mock      # Angular build -> dist-mock/
-npm run mock-backend    # http://127.0.0.1:4200/edu-sharing/
+npm run e2e:mock:prepare   # once: libraries + app (dist-mock/) + mock backend
+npm run mock-backend       # http://127.0.0.1:4200/edu-sharing/
 ```
 
 Credentials: `e2e` / `e2e` (or `admin` / `admin`). Everything else is rejected.
@@ -46,6 +45,25 @@ silently rendering an error state.
 
 To add one: implement the route in `src/routes/<area>.routes.ts`, put the data into
 `src/fixtures/`, run `npm run build:mock-backend`.
+
+## Response shapes the frontend does not guard
+
+Several components dereference response fields without a null check, so an "empty" fixture is not
+enough - these have to carry real structure:
+
+| Endpoint / field | Consumer | Required |
+| --- | --- | --- |
+| `validateSession.oauthEntries` | Google login plugin | array (may be empty) |
+| `node.icon.url`, `node.preview.url` | `NodeIconPipe` / `NodeImagePipe` | set on **every** node, folders and collections included |
+| content URLs (`preview`, `content`, `downloadUrl`) | `RepoUrlService.withCurrentOrigin` | absolute (`new URL()`), host is rewritten to the current origin |
+| `.../nodes/{id}/stats` | collection info bar (`stats.total[...]`) | `{ total: { ... } }` |
+| `.../children/references` | collection content | `ReferenceEntries` (`references`, **not** `nodes`) |
+| `.../children/proposals` | collection content (`e.nodes.map`) | `NodeEntries` (`nodes`) |
+| `config/v1/values.availableMds[].mds` | `MdsHelper` (`mds.indexOf`) | omit the key entirely, or use `{ repository, mds: [...] }` |
+| mds `groups` | search page | must contain `ngsearch` and `search_input` |
+
+The `filter=folders` query of `/node/v1/nodes/{...}/children` is honoured - without it, files show
+up in the workspace folder tree.
 
 ## Keeping fixtures in sync with the API
 

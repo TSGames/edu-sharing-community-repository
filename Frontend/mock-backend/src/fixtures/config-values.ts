@@ -38,7 +38,6 @@ const values: Values = {
         title: 'edu-sharing (Mock)',
         currentScope: null,
     },
-    availableMds: [{ id: '-default-', label: 'Default' }],
 };
 
 export const clientConfig: Config = {

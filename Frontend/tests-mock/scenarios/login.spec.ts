@@ -1,4 +1,4 @@
-import { expect, expectScreenshot, settle, test } from '../fixtures';
+import { expect, expectScreenshot, PROGRESS_BAR, settle, test } from '../fixtures';
 import { AppPage } from '../pages/app.page';
 
 test.describe('login', () => {
@@ -8,7 +8,9 @@ test.describe('login', () => {
 
         await expect(page.locator('input[name="username"]')).toBeVisible();
         await expect(page.locator('input[type="password"]')).toBeVisible();
-        await expectScreenshot(page, 'login-form.png');
+        await expectScreenshot(page, 'login-form.png', {
+            mask: [page.locator(PROGRESS_BAR)],
+        });
         expect(consoleErrors).toEqual([]);
     });
 
@@ -31,6 +33,8 @@ test.describe('login', () => {
         await settle(page);
 
         await expect(page.locator('[data-test="main-nav-scope-button"]')).toBeVisible();
-        await expectScreenshot(page, 'start-page.png');
+        await expectScreenshot(page, 'start-page.png', {
+            mask: [page.locator(PROGRESS_BAR)],
+        });
     });
 });

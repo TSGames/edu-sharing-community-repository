@@ -111,7 +111,9 @@ export function createServer(): http.Server {
 
         // 1. REST API
         if (pathname.startsWith(REST_PREFIX)) {
-            const apiPath = pathname.slice(REST_PREFIX.length) || '/';
+            // The frontend appends a trailing slash on some endpoints; the backend treats
+            // `/organizations/-home-/` and `/organizations/-home-` as the same resource.
+            const apiPath = pathname.slice(REST_PREFIX.length).replace(/\/+$/, '') || '/';
             const match = apiRouter.match(method, apiPath);
             if (!match) {
                 logUnmocked(method, pathname);

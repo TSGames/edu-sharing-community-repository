@@ -162,9 +162,9 @@ e2e mock:
     paths:
       - Frontend/node_modules
   variables:
-    # Set to "1" once baselines for all scenarios are committed; a missing baseline then fails
-    # the build instead of skipping the comparison.
-    E2E_MOCK_REQUIRE_BASELINES: "0"
+    # A scenario without a committed baseline fails the build instead of silently skipping the
+    # visual comparison.
+    E2E_MOCK_REQUIRE_BASELINES: "1"
   before_script:
     - cd Frontend
     - node -v

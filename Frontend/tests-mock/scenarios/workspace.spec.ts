@@ -14,19 +14,20 @@ test.describe('workspace', () => {
         await app.goto(AppPage.workspaceUrl);
 
         await app.expectScope(/Workspace|Arbeitsbereich/i);
-        await expect(page.getByText('Unterrichtsmaterial').first()).toBeVisible();
-        await expect(page.getByText('Bilder').first()).toBeVisible();
+        await expect(app.row('Unterrichtsmaterial')).toBeVisible();
+        await expect(app.row('Bilder')).toBeVisible();
         await expectScreenshot(app.mainContent, 'workspace-home.png');
     });
 
     test('opens a folder', async ({ page }) => {
         const app = new AppPage(page);
         await app.goto(AppPage.workspaceUrl);
-        await page.getByText('Unterrichtsmaterial').first().dblclick();
+        // The row of the node list, not the entry of the folder tree in the sidebar.
+        await app.row('Unterrichtsmaterial').first().dblclick();
         await settle(page);
 
         // `Unterrichtsmaterial` holds the last four materials of the corpus.
-        await expect(page.getByText('Programmieren mit Scratch').first()).toBeVisible();
+        await expect(app.row('Programmieren mit Scratch')).toBeVisible();
         await expectScreenshot(app.mainContent, 'workspace-folder.png');
     });
 });

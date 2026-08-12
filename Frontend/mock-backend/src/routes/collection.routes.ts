@@ -3,7 +3,7 @@ import { collectionReferences, collections, findCollection } from '../fixtures/c
 import { json } from '../http';
 import { Router } from '../router';
 
-const EMPTY_PAGE = { nodes: [], pagination: { total: 0, from: 0, count: 0 } };
+const EMPTY_PAGINATION = { total: 0, from: 0, count: 0 };
 
 export function registerCollectionRoutes(router: Router): void {
     router.get(
@@ -21,16 +21,18 @@ export function registerCollectionRoutes(router: Router): void {
         ({ res, params, query }) => {
             const items = collectionReferences[params.collection] ?? [];
             const { page, pagination } = paginate(items, query);
-            json(res, { nodes: page, pagination });
+            // `ReferenceEntries`, not `NodeEntries`: the key is `references`.
+            json(res, { references: page, pagination });
         },
     );
 
+    // Proposals are `NodeEntries` (`e.nodes.map(...)` in `collection-content.component`).
     router.get('/collection/v1/collections/:repository/:collection/children/proposals', ({ res }) =>
-        json(res, EMPTY_PAGE),
+        json(res, { nodes: [], pagination: EMPTY_PAGINATION }),
     );
 
     router.get('/collection/v1/collections/:repository/children/proposals/collections', ({ res }) =>
-        json(res, { collections: [], pagination: { total: 0, from: 0, count: 0 } }),
+        json(res, { collections: [], pagination: EMPTY_PAGINATION }),
     );
 
     router.get('/collection/v1/collections/:repository/:collectionId', ({ res, params }) => {

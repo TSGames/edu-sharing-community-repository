@@ -1,5 +1,5 @@
-import { Node } from '../models';
-import { FIXED_ISO, MOCK_PERSON, ref } from './builders';
+import { CollectionReference, Node } from '../models';
+import { FIXED_ISO, MOCK_PERSON, ORIGIN, ref } from './builders';
 import { files } from './nodes';
 
 export const COLLECTION_MATH = '00000000-0000-4000-b000-000000000001';
@@ -11,6 +11,7 @@ function makeCollection(options: {
     description: string;
     color: string;
     referenceCount: number;
+    previewIndex: number;
 }): Node {
     return {
         ref: ref(options.id),
@@ -27,6 +28,16 @@ function makeCollection(options: {
         access: ['Read', 'Write', 'Delete', 'ChangePermissions', 'AddChildren'],
         mediatype: 'collection',
         repositoryType: 'ALFRESCO',
+        // Collection cards run through the same icon/preview pipes as nodes.
+        iconURL: `${ORIGIN}/edu-sharing/themes/default/images/common/collection.svg`,
+        icon: { url: `${ORIGIN}/edu-sharing/themes/default/images/common/collection.svg` },
+        preview: {
+            url: `${ORIGIN}/edu-sharing/preview/preview-${options.previewIndex}.png`,
+            width: 800,
+            height: 600,
+            isIcon: false,
+            mimetype: 'image/png',
+        },
         collection: {
             title: options.title,
             description: options.description,
@@ -57,6 +68,7 @@ export const collections: Node[] = [
         description: 'Materialien für die Sekundarstufe I.',
         color: '#1a73e8',
         referenceCount: 3,
+        previewIndex: 1,
     }),
     makeCollection({
         id: COLLECTION_SCIENCE,
@@ -64,15 +76,19 @@ export const collections: Node[] = [
         description: 'Biologie, Chemie und Physik.',
         color: '#188038',
         referenceCount: 2,
+        previewIndex: 2,
     }),
 ];
 
 /** Collection references are ordinary nodes carrying the original node id. */
-export const collectionReferences: { [collectionId: string]: Node[] } = {
+export const collectionReferences: { [collectionId: string]: CollectionReference[] } = {
     [COLLECTION_MATH]: files.slice(0, 3).map((file, index) => ({
         ...file,
         ref: ref(`00000000-0000-4000-c000-00000000000${index + 1}`),
         aspects: [...(file.aspects ?? []), 'ccm:collection_io_reference'],
+        originalId: file.ref.id,
+        accessOriginal: file.access,
+        accessEffective: file.access,
         properties: {
             ...file.properties,
             'ccm:original': [file.ref.id],
@@ -82,6 +98,9 @@ export const collectionReferences: { [collectionId: string]: Node[] } = {
         ...file,
         ref: ref(`00000000-0000-4000-c000-00000000001${index + 1}`),
         aspects: [...(file.aspects ?? []), 'ccm:collection_io_reference'],
+        originalId: file.ref.id,
+        accessOriginal: file.access,
+        accessEffective: file.access,
         properties: {
             ...file.properties,
             'ccm:original': [file.ref.id],

@@ -6,6 +6,13 @@ export const FIXED_ISO = new Date(config.fixedTime).toISOString();
 export const FIXED_MILLIS = String(config.fixedTime);
 
 export const REPOSITORY = '-home-';
+
+/**
+ * Content URLs must be absolute: `RepoUrlService.withCurrentOrigin` runs them through `new URL()`
+ * and throws on a relative path (the real backend returns absolute URLs here as well). Host and
+ * protocol are replaced with the current origin, so pointing at the mock's own origin is safe.
+ */
+export const ORIGIN = `http://127.0.0.1:${config.port}`;
 export const USER_HOME_ID = '00000000-0000-4000-a000-000000000001';
 
 export const MOCK_PERSON: Person = {
@@ -86,16 +93,24 @@ export function makeFile(options: FileOptions): Node {
         commentCount: 0,
         isPublic: false,
         usedInCollections: [],
-        iconURL: '/edu-sharing/themes/default/images/common/mime-types/svg/file-pdf.svg',
+        iconURL: `${ORIGIN}/edu-sharing/themes/default/images/common/mime-types/svg/file-pdf.svg`,
+        // `NodeIconPipe` dereferences `node.icon.url` unconditionally.
+        icon: {
+            url: `${ORIGIN}/edu-sharing/themes/default/images/common/mime-types/svg/file-pdf.svg`,
+        },
         preview: {
-            url: `/edu-sharing/preview/preview-${previewIndex}.png`,
+            url: `${ORIGIN}/edu-sharing/preview/preview-${previewIndex}.png`,
             width: 800,
             height: 600,
             isIcon: false,
             isGenerated: true,
             mimetype: 'image/png',
         },
-        content: { url: `/edu-sharing/eduservlet/download?nodeId=${options.id}`, version: '1.0' },
+        downloadUrl: `${ORIGIN}/edu-sharing/eduservlet/download?nodeId=${options.id}`,
+        content: {
+            url: `${ORIGIN}/edu-sharing/eduservlet/download?nodeId=${options.id}`,
+            version: '1.0',
+        },
         license: {
             icon: `/edu-sharing/ccimages/licenses/${license.toLowerCase()}.svg`,
             url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -133,7 +148,17 @@ export function makeFolder(options: { id: string; name: string; parent?: string 
         metadataset: '-default-',
         repositoryType: 'ALFRESCO',
         size: '0',
-        iconURL: '/edu-sharing/themes/default/images/common/mime-types/svg/folder.svg',
+        iconURL: `${ORIGIN}/edu-sharing/themes/default/images/common/mime-types/svg/folder.svg`,
+        icon: {
+            url: `${ORIGIN}/edu-sharing/themes/default/images/common/mime-types/svg/folder.svg`,
+        },
+        preview: {
+            url: `${ORIGIN}/edu-sharing/themes/default/images/common/mime-types/svg/folder.svg`,
+            width: 24,
+            height: 24,
+            isIcon: true,
+            mimetype: 'image/svg+xml',
+        },
         properties: {
             'cm:name': [options.name],
             'cm:created': [FIXED_MILLIS],

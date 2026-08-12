@@ -21,7 +21,16 @@ export function registerNodeRoutes(router: Router): void {
             json(res, { nodes: [], pagination: { total: 0, from: 0, count: 0 } });
             return;
         }
-        const { page, pagination } = paginate(childrenOf(params.node), query);
+        // The workspace tree requests `filter=folders`; without honouring it, files show up
+        // as tree nodes.
+        const filter = query.getAll('filter');
+        let children = childrenOf(params.node);
+        if (filter.includes('folders')) {
+            children = children.filter((node) => node.isDirectory);
+        } else if (filter.includes('files')) {
+            children = children.filter((node) => !node.isDirectory);
+        }
+        const { page, pagination } = paginate(children, query);
         json(res, { nodes: page, pagination });
     });
 
@@ -50,7 +59,17 @@ export function registerNodeRoutes(router: Router): void {
     router.get('/node/v1/nodes/:repository/:node/shares', ({ res }) => json(res, []));
     router.get('/node/v1/nodes/:repository/:node/versions', ({ res }) => json(res, { versions: [] }));
     router.get('/node/v1/nodes/:repository/:node/comments', ({ res }) => json(res, { comments: [] }));
-    router.get('/node/v1/nodes/:repository/:node/stats', ({ res }) => json(res, {}));
+    // `NodeStats.total` is dereferenced without a guard by the collection info bar.
+    router.get('/node/v1/nodes/:repository/:node/stats', ({ res }) =>
+        json(res, {
+            total: {
+                VIEW_COLLECTION: 0,
+                VIEW_MATERIAL: 0,
+                DOWNLOAD_MATERIAL: 0,
+                VIEW_MATERIAL_EMBEDDED: 0,
+            },
+        }),
+    );
 
     router.get('/rendering/v1/details/:repository/:node', ({ res, params }) => {
         const node = findNode(params.node);

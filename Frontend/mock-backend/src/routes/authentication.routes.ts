@@ -18,6 +18,8 @@ function loggedIn(user: KnownUser): PrimaryLogin {
         statusCode: 'OK',
         toolPermissions,
         userHome: USER_HOME_ID,
+        // Dereferenced without a guard by the Google login plugin.
+        oauthEntries: [],
         remoteAuthentications: {},
     };
 }
@@ -31,6 +33,7 @@ const anonymous: PrimaryLogin = {
     currentScope: null,
     statusCode: 'INVALID_CREDENTIALS',
     toolPermissions: [],
+    oauthEntries: [],
     remoteAuthentications: {},
 };
 

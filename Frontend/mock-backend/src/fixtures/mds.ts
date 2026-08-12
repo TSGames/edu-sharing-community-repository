@@ -26,6 +26,16 @@ export const defaultMds: Mds = {
         { id: 'collectionReferences', columns: { Default: columns } },
         { id: 'genericWidget', columns: { Default: columns } },
         { id: 'genericWidgetTable', columns: { Default: columns } },
+        {
+            id: 'searchCollections',
+            columns: {
+                Default: [
+                    { id: 'COLLECTION.title' },
+                    { id: 'COLLECTION.info' },
+                    { id: 'COLLECTION.scope' },
+                ],
+            },
+        },
     ],
     widgets: [
         { id: 'cclom:title', caption: 'Titel', type: 'text', isSearchable: true },
@@ -49,10 +59,17 @@ export const defaultMds: Mds = {
         {
             id: 'search',
             caption: 'Suche',
-            html: '<ngsearchword></ngsearchword><ccm:educationalcontext></ccm:educationalcontext>',
+            html: '<ccm:educationalcontext></ccm:educationalcontext>',
         },
+        { id: 'search_suggestions', rel: 'suggestions', html: '' },
+        { id: 'search_input', rel: 'suggestions', html: '' },
     ],
-    groups: [{ id: 'search', views: ['search'] }],
+    // Group ids the search page looks up by name - `MdsEditorInstanceService` throws
+    // "no such group" when one of them is missing.
+    groups: [
+        { id: 'ngsearch', rendering: 'angular', views: ['search', 'search_suggestions'] },
+        { id: 'search_input', rendering: 'angular', views: ['search_input'] },
+    ],
     sorts: [
         {
             id: 'search',

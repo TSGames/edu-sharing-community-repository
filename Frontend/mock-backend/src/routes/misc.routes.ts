@@ -34,7 +34,12 @@ export function registerMiscRoutes(router: Router): void {
     );
 
     router.get('/ltiplatform/v13/tools', ({ res }) => json(res, []));
-    router.get('/connector/v1/connectors/list', ({ res }) => json(res, { connectors: [] }));
+    router.get('/connector/v1/connectors/:repository/list', ({ res }) =>
+        json(res, { url: null, connectors: [] }),
+    );
+    router.get('/organization/v1/organizations/:repository', ({ res }) =>
+        json(res, { organizations: [], pagination: { total: 0, from: 0, count: 0 } }),
+    );
     router.get('/mediacenter/v1/mediacenter/:repository', ({ res }) => json(res, []));
     router.get('/register/v1/exists/:mail', ({ res }) => json(res, { exists: false }));
     router.get('/stream/v1/:repository', ({ res }) =>
