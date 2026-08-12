@@ -16,8 +16,16 @@ export class AppPage {
 
     constructor(private readonly page: Page) {}
 
+    /**
+     * Opens a page with `locale=none`.
+     *
+     * In that language the application renders the raw i18n keys, which makes the baselines
+     * independent of the configured default language and of translation changes - only layout and
+     * data show up in a diff.
+     */
     async goto(url: string): Promise<void> {
-        await this.page.goto(url);
+        const separator = url.includes('?') ? '&' : '?';
+        await this.page.goto(`${url}${separator}locale=none`);
         await settle(this.page);
     }
 
@@ -27,8 +35,15 @@ export class AppPage {
         await this.page.locator('input[type="password"]').press('Enter');
     }
 
-    async expectScope(pattern: string | RegExp): Promise<void> {
-        await expect(this.page.locator('[data-test="main-nav-scope-button"]')).toHaveText(pattern);
+    /**
+     * Waits until a page shell is rendered.
+     *
+     * Deliberately not the scope button of the main nav: it is hidden below the mobile breakpoint,
+     * and with `locale=none` it only carries a raw i18n key anyway. Which page is shown is
+     * asserted through its content in the scenarios.
+     */
+    async expectPageShell(): Promise<void> {
+        await expect(this.mainContent).toBeVisible();
     }
 
     /** A row of a node list in table view. */

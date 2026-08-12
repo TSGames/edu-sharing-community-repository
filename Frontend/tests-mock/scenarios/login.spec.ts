@@ -32,7 +32,8 @@ test.describe('login', () => {
         await page.waitForURL(/components\/(workspace|search)/);
         await settle(page);
 
-        await expect(page.locator('[data-test="main-nav-scope-button"]')).toBeVisible();
+        // Not the scope button: it is hidden below the mobile breakpoint.
+        await expect(app.mainContent).toBeVisible();
         await expectScreenshot(page, 'start-page.png', {
             mask: [page.locator(PROGRESS_BAR)],
         });

@@ -19,6 +19,16 @@ needed. `npm run mock-backend` beforehand is fine too — an already running ser
 ## Screenshots
 
 Baselines live in `tests-mock/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.
+Every scenario runs in two projects, so each screenshot exists twice:
+
+| Project | Viewport | Covers |
+| --- | --- | --- |
+| `chromium` | 1280×800 | desktop layout |
+| `mobile` | 393×851 (Pixel 5, portrait) | below the mobile breakpoint (`$mobileTabSwitchWidth`, 900px): bottom navigation, collapsed toolbars |
+
+All pages are opened with **`locale=none`** (`AppPage.goto` appends it). The application then renders
+the raw i18n keys, which makes the baselines independent of the configured default language: a
+changed or added translation never invalidates a screenshot, only layout and data do.
 
 Rendering depends on the browser build and the installed fonts, so baselines are only valid when
 they were recorded in the same image CI uses:
@@ -42,10 +52,15 @@ recorded.
 
 `fixtures.ts` sets all of this up before the first navigation:
 
+* language `none`, pinned twice: the `locale=none` query parameter *and* the `language` key in
+  localStorage plus the mocked user preferences. The query parameter alone is applied only after
+  the first render, so a cold load briefly shows the default language - which made screenshots
+  differ between runs.
 * seeded `Math.random`
 * tutorials dismissed via `localStorage`
 * requests to any host other than the mock are aborted
-* fixed viewport, locale `de-DE`, timezone `UTC`, `colorScheme: light`, reduced motion
+* fixed viewport per project, browser locale `de-DE`, timezone `UTC`, `colorScheme: light`,
+  reduced motion
 * `screenshot.css` disables animations, transitions, carets, ripples and scrollbars
 * all scroll positions are reset - node lists keep an internal scroll offset across navigations,
   which otherwise shifts a whole table by one row between runs
@@ -64,7 +79,9 @@ implement (HTTP 501).
 ## Adding a scenario
 
 1. Add a spec under `scenarios/`, using the helpers from `../fixtures` (`test`, `settle`,
-   `expectScreenshot`) and `../pages/app.page.ts`.
+   `expectScreenshot`) and `../pages/app.page.ts`. It has to hold up in **both** projects - do not
+   assert on elements of the main nav (the scope button is hidden on mobile), use
+   `app.expectPageShell()` and content assertions instead.
 2. If new REST endpoints are needed, implement them in the mock backend — `npm run e2e:mock` tells
    you which ones are missing.
 3. Record the baselines with `./scripts/e2e-mock-docker.sh --update-snapshots` and commit them.

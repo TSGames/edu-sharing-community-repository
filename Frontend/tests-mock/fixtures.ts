@@ -55,6 +55,11 @@ export const test = base.extend<MockFixtures>({
             };
             window.localStorage.setItem('TUTORIAL.USER_TUTORIAL_HEADING', 'true');
             window.localStorage.setItem('TUTORIAL.SEARCH.TUTORIAL_HEADING', 'true');
+            // Language "none" from the very first paint. The `locale=none` query parameter alone
+            // is applied only after the first render, so a cold load would briefly show the
+            // default language - and that race made screenshots differ between runs.
+            // `SessionStorageService` reads this key from localStorage for guests.
+            window.localStorage.setItem('language', JSON.stringify('none'));
         });
         // Nothing outside the mock may influence the rendering.
         await page.route('**', async (route) => {

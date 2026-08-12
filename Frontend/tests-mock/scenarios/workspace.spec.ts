@@ -13,7 +13,7 @@ test.describe('workspace', () => {
         const app = new AppPage(page);
         await app.goto(AppPage.workspaceUrl);
 
-        await app.expectScope(/Workspace|Arbeitsbereich/i);
+        await app.expectPageShell();
         await expect(app.row('Unterrichtsmaterial')).toBeVisible();
         await expect(app.row('Bilder')).toBeVisible();
         await expectScreenshot(app.mainContent, 'workspace-home.png');

@@ -42,7 +42,9 @@ let sessionCounter = 0;
 function createSession(): Session {
     // Deterministic ids keep HAR dumps and logs diffable between runs.
     const id = `mock-session-${++sessionCounter}`;
-    const session: Session = { id, user: null, preferences: '{}' };
+    // The language is part of the user preferences; pinning it to "none" keeps the UI on raw
+    // i18n keys for logged-in users too (see tests-mock/README.md).
+    const session: Session = { id, user: null, preferences: '{"language":"none"}' };
     sessions.set(id, session);
     return session;
 }

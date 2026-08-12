@@ -14,6 +14,11 @@ import { devices } from '@playwright/test';
 
 const isCi = !!process.env.CI;
 
+/** Same rendering on every machine: fixed colour profile, no font hinting. */
+const chromiumLaunchOptions = {
+    args: ['--force-color-profile=srgb', '--font-render-hinting=none'],
+};
+
 const config: PlaywrightTestConfig = {
     // Compiled output of `tests-mock` (see `npm run pree2e:mock`).
     testDir: './playwright/out-mock/tests-mock/scenarios',
@@ -59,9 +64,19 @@ const config: PlaywrightTestConfig = {
             name: 'chromium',
             use: {
                 ...devices['Desktop Chrome'],
-                launchOptions: {
-                    args: ['--force-color-profile=srgb', '--font-render-hinting=none'],
-                },
+                launchOptions: chromiumLaunchOptions,
+            },
+        },
+        {
+            // Portrait phone: below `$mobileTabSwitchWidth` (900px) the layout switches to the
+            // mobile navigation, which desktop baselines never cover.
+            name: 'mobile',
+            use: {
+                ...devices['Pixel 5'],
+                // Overrides the global desktop viewport of `use` above.
+                viewport: { width: 393, height: 851 },
+                deviceScaleFactor: 1,
+                launchOptions: chromiumLaunchOptions,
             },
         },
     ],
