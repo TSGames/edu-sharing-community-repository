@@ -58,4 +58,11 @@ src/app/rest
 /playwright/storage/*.json
 /playwright/out
 
+# Mock-backend e2e suite (baselines in tests-mock/__screenshots__ are committed)
+/dist-mock
+/playwright/out-mock
+/playwright/test-results-mock/
+/playwright-report-mock/
+/mock-backend/out
+
 projects/rendering-service-lib/dist/

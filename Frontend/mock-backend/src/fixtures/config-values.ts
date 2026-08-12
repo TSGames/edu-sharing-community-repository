@@ -1,0 +1,66 @@
+import { Config, Language, Values, Variables } from '../models';
+
+/**
+ * Client configuration.
+ *
+ * Deliberately lean: the frontend falls back to sensible defaults for missing keys
+ * (`ConfigurationService.get(key, fallback)`), while every feature switched *on* here would pull
+ * in additional REST endpoints and non-deterministic UI (banners, tutorials, ratings).
+ */
+const values: Values = {
+    // Where `StartupComponent` sends the user after login (non-production build).
+    defaultLocation: 'workspace',
+    loginDefaultLocation: 'workspace',
+    supportedLanguages: ['de', 'en'],
+    siteTitle: 'edu-sharing (Mock)',
+    branding: false,
+    loginAllowLocal: true,
+    itemsPerRequest: 25,
+    // 0 = list/table view: deterministic row heights, better suited for pixel baselines than cards.
+    searchViewType: 0,
+    workspaceViewType: 0,
+    searchSidenavMode: 'never',
+    searchGroupResults: false,
+    nodeReport: false,
+    publishingNotice: false,
+    licenseDialogOnUpload: false,
+    userAffiliation: false,
+    editProfile: false,
+    workspaceColumns: ['cclom:title', 'cm:modified', 'ccm:commonlicense_key'],
+    rating: { mode: 'none' },
+    register: { local: false, recoverPassword: false },
+    stream: { enabled: false },
+    upload: { postDialog: { license: false } },
+    frontpage: { enabled: false },
+    collections: { scopes: ['MY'] },
+    mainnav: {
+        icon: null,
+        title: 'edu-sharing (Mock)',
+        currentScope: null,
+    },
+    availableMds: [{ id: '-default-', label: 'Default' }],
+};
+
+export const clientConfig: Config = {
+    current: values,
+    global: values,
+    contextId: null,
+};
+
+export const variables: Variables = {
+    current: {},
+    global: {},
+};
+
+/**
+ * Translation *overrides*. The mock is served from a non-production build, so the frontend loads
+ * its dictionaries from `assets/i18n` and only asks the backend for overrides — an empty object is
+ * both correct and keeps the fixture small.
+ */
+export const language: Language = {
+    current: {},
+    global: {},
+    currentLanguage: 'de',
+};
+
+export const languageDefaults: { [key: string]: string } = {};

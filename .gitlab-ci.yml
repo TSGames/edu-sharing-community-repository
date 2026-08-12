@@ -22,6 +22,7 @@ default:
       command: [ "dockerd-entrypoint.sh" ]
 
 stages:
+  - build
   - test
   - deploy
 
@@ -109,6 +110,79 @@ unittest frontend:
   script:
     - npm run prebuild
     - npm run test-ci
+
+# Builds the application and the mock backend for the "e2e mock" job below.
+# Runs on the same image/cache as the other frontend jobs so the Angular build stays warm.
+build frontend mock:
+  <<: *frontend_job
+  stage: build
+  variables:
+    NODE_VERSION: 24.9
+  before_script:
+    - node -v
+    - npm -v
+    - cd Frontend
+    # Install dependencies on cache miss, e.g., when first running on a ci runner.
+    - ([[ -d node_modules ]] || npm ci)
+    - mkdir -p projects/edu-sharing-api/build/
+    - cp ../Backend/services/rest/api/src/main/resources/openapi.json projects/edu-sharing-api/build/openapi.json
+    - cd projects/edu-sharing-api
+    - npm run generate-api
+    - cd ../..
+  script:
+    - npm run prebuild
+    # The `mock` configuration keeps `environment.production === false`, which is required:
+    # translations are then loaded from local assets and the startup redirect stays client-side.
+    - npm run build:mock
+    - npm run build:mock-backend
+  artifacts:
+    paths:
+      - Frontend/dist-mock/
+      - Frontend/mock-backend/out/
+    expire_in: 1 day
+
+# Validates the frontend against the mock backend, including screenshot comparison.
+# Runs on every build - no real repository required.
+e2e mock:
+  stage: test
+  # Pinned image: identical browser, fonts and rendering as when the baselines were recorded.
+  image: mcr.microsoft.com/playwright:v1.57.0-noble
+  needs: ["build frontend mock"]
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^maven\/release\/.*/ && $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_COMMIT_TAG && $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_COMMIT_BRANCH !~ /^maven\/release\/.*/ && $CI_COMMIT_TAG == null
+  cache:
+    # Own cache key: this image is glibc-based, the other frontend jobs run on alpine (musl),
+    # so their node_modules (native bindings) must not be shared.
+    key:
+      files:
+        - Frontend/package-lock.json
+      prefix: node-modules-playwright-1.57.0
+    paths:
+      - Frontend/node_modules
+  variables:
+    # Set to "1" once baselines for all scenarios are committed; a missing baseline then fails
+    # the build instead of skipping the comparison.
+    E2E_MOCK_REQUIRE_BASELINES: "0"
+  before_script:
+    - cd Frontend
+    - node -v
+    - npm -v
+    - ([[ -d node_modules ]] || npm ci)
+  script:
+    - npm run e2e:mock
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - Frontend/playwright-report-mock/
+      # Contains "-actual.png" / "-diff.png" of failed screenshot comparisons.
+      - Frontend/playwright/test-results-mock/
+      # Endpoints the app requested but the mock does not implement.
+      - Frontend/mock-backend/out/unmocked.log
+    reports:
+      junit: Frontend/playwright-report-mock/junit.xml
 
 build storybook:
   <<: *frontend_job

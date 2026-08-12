@@ -118,6 +118,24 @@
                 }
               ]
             },
+            "mock": {
+              "outputPath": {
+                "base": "dist-mock",
+                "browser": ""
+              },
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": false
+              },
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true
+            },
             "web-component": {
               "budgets": [
                 {
