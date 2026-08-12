@@ -130,9 +130,12 @@ build frontend mock:
     - npm run generate-api
     - cd ../..
   script:
-    - npm run prebuild
+    # Not `prebuild`: the app maps `ngx-edu-sharing-ui` and `ngx-rendering-service-lib` to their
+    # sources, so only the three generated API clients have to be packaged (~20s instead of ~4min).
+    - npm run build:mock-libs
     # The `mock` configuration keeps `environment.production === false`, which is required:
     # translations are then loaded from local assets and the startup redirect stays client-side.
+    # It also builds unoptimized - that is ~2x faster and renders pixel-identically (verified).
     - npm run build:mock
     - npm run build:mock-backend
   artifacts:

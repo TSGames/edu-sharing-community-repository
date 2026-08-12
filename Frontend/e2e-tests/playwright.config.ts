@@ -1,5 +1,5 @@
-import type { PlaywrightTestConfig } from '@playwright/test';
-import { devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
+import type { MockOptions } from './tests/fixtures';
 
 /**
  * Playwright configuration for the mock-backend suite.
@@ -19,7 +19,30 @@ const chromiumLaunchOptions = {
     args: ['--force-color-profile=srgb', '--font-render-hinting=none'],
 };
 
-const config: PlaywrightTestConfig = {
+const desktop = {
+    ...devices['Desktop Chrome'],
+    launchOptions: chromiumLaunchOptions,
+};
+
+/**
+ * Portrait phone: below `$mobileTabSwitchWidth` (900px) the layout switches to the mobile
+ * navigation, which the desktop baselines never cover.
+ */
+const mobile = {
+    ...devices['Pixel 5'],
+    viewport: { width: 393, height: 851 },
+    deviceScaleFactor: 1,
+    launchOptions: chromiumLaunchOptions,
+};
+
+/**
+ * `theme` reaches the application through the `?theme=` query parameter; `colorScheme` makes the
+ * browser's `prefers-color-scheme` agree with it, so media queries match the applied theme.
+ */
+const light = { theme: 'light' as const, colorScheme: 'light' as const };
+const dark = { theme: 'dark' as const, colorScheme: 'dark' as const };
+
+const config = defineConfig<MockOptions>({
     // Compiled output of `tests/` (see `npm run pree2e:mock`).
     testDir: './build/tests/scenarios',
     outputDir: './test-results',
@@ -36,8 +59,11 @@ const config: PlaywrightTestConfig = {
             maxDiffPixelRatio: 0.002,
         },
     },
-    fullyParallel: false,
-    workers: isCi ? 1 : 2,
+    // The scenarios share nothing: every test logs in itself, and the mock backend keeps its state
+    // per session cookie, i.e. per browser context. So they can all run at the same time.
+    fullyParallel: true,
+    // One worker per core, capped - beyond that the workers mostly wait for each other's CPU.
+    workers: isCi ? '100%' : '50%',
     // Retries would mask flakiness; a mock backend removes the usual reasons for it.
     retries: 0,
     forbidOnly: isCi,
@@ -50,7 +76,6 @@ const config: PlaywrightTestConfig = {
         baseURL: 'http://127.0.0.1:4200/edu-sharing/',
         viewport: { width: 1280, height: 800 },
         deviceScaleFactor: 1,
-        colorScheme: 'light',
         // `reducedMotion` is only available as a context option.
         contextOptions: { reducedMotion: 'reduce' },
         locale: 'de-DE',
@@ -59,25 +84,24 @@ const config: PlaywrightTestConfig = {
         video: 'off',
         screenshot: 'only-on-failure',
     },
+    // Four projects, i.e. four baselines per screenshot: desktop and portrait phone, each in light
+    // and dark mode. `snapshotPathTemplate` keeps them apart by project name.
     projects: [
         {
             name: 'chromium',
-            use: {
-                ...devices['Desktop Chrome'],
-                launchOptions: chromiumLaunchOptions,
-            },
+            use: { ...desktop, ...light },
         },
         {
-            // Portrait phone: below `$mobileTabSwitchWidth` (900px) the layout switches to the
-            // mobile navigation, which desktop baselines never cover.
+            name: 'chromium-dark',
+            use: { ...desktop, ...dark },
+        },
+        {
             name: 'mobile',
-            use: {
-                ...devices['Pixel 5'],
-                // Overrides the global desktop viewport of `use` above.
-                viewport: { width: 393, height: 851 },
-                deviceScaleFactor: 1,
-                launchOptions: chromiumLaunchOptions,
-            },
+            use: { ...mobile, ...light },
+        },
+        {
+            name: 'mobile-dark',
+            use: { ...mobile, ...dark },
         },
     ],
     webServer: {
@@ -89,6 +113,6 @@ const config: PlaywrightTestConfig = {
         stdout: 'pipe',
         stderr: 'pipe',
     },
-};
+});
 
 export default config;

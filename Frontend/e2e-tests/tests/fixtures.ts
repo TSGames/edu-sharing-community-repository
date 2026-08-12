@@ -1,5 +1,6 @@
 import { expect, Locator, Page, test as base } from '@playwright/test';
 import * as fs from 'fs';
+import { AppPage } from './pages/app.page';
 
 /** Requests that are allowed to fail without failing the test. */
 const IGNORED_CONSOLE_MESSAGES = [
@@ -12,6 +13,16 @@ const IGNORED_CONSOLE_MESSAGES = [
 export interface MockFixtures {
     /** Messages the page logged to `console.error` (minus the allowlist). */
     consoleErrors: string[];
+    /** Page helper, pre-configured with the project's theme. */
+    app: AppPage;
+}
+
+export interface MockOptions {
+    /**
+     * Colour theme of the project. Handed to the application as `?theme=...`, which takes priority
+     * over the stored accessibility setting (see `ThemeService.registerDarkMode`).
+     */
+    theme: 'light' | 'dark';
 }
 
 /**
@@ -22,7 +33,13 @@ export interface MockFixtures {
  * - dismissed tutorials, so no overlay covers the page,
  * - guards that turn unmocked endpoints (HTTP 501) and console errors into test failures.
  */
-export const test = base.extend<MockFixtures>({
+export const test = base.extend<MockOptions & MockFixtures>({
+    theme: ['light', { option: true }],
+
+    app: async ({ page, theme }, use) => {
+        await use(new AppPage(page, theme));
+    },
+
     consoleErrors: async ({ page }, use) => {
         const errors: string[] = [];
         const unmocked: string[] = [];
@@ -92,13 +109,17 @@ export async function settle(page: Page): Promise<void> {
     // The main nav progress bar is not a reliable idle signal - it stays visible on some pages
     // even after all requests finished. It is masked in screenshots instead (see `PROGRESS_BAR`).
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
-    // Reset every scroll position: node lists keep an internal scroll offset that survives
-    // navigation, which would otherwise shift a whole table by one row between runs.
+    // Reset every scroll position - vertically, because node lists keep an internal scroll offset
+    // that survives navigation (it shifted whole tables by one row), and horizontally, because the
+    // collection carousel starts on a different card depending on how fast the page loaded.
     await page.evaluate(() => {
         window.scrollTo(0, 0);
         document.querySelectorAll('*').forEach((element) => {
             if (element.scrollTop) {
                 element.scrollTop = 0;
+            }
+            if (element.scrollLeft) {
+                element.scrollLeft = 0;
             }
         });
     });
@@ -120,6 +141,10 @@ export async function expectScreenshot(
     name: string,
     options: Parameters<Locator['screenshot']>[0] & { mask?: Locator[] } = {},
 ): Promise<void> {
+    const page = 'page' in target ? (target as Locator).page() : (target as Page);
+    // Always masked: the progress bar of the main nav is animated, stays visible on some pages and
+    // shows up as a 4px strip at the top of the content area on mobile.
+    const mask = [...(options.mask ?? []), page.locator(PROGRESS_BAR)];
     const info = test.info();
     const updateMode = info.config.updateSnapshots;
     const baseline = info.snapshotPath(name);
@@ -134,5 +159,5 @@ export async function expectScreenshot(
             return;
         }
     }
-    await expect(target).toHaveScreenshot(name, options);
+    await expect(target).toHaveScreenshot(name, { ...options, mask });
 }

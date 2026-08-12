@@ -22,8 +22,8 @@ and compare screenshots against committed baselines. This suite runs in **every*
 ## Running locally
 
 ```
-npm run e2e:mock:prepare   # once: build libraries, app (dist-mock/) and mock backend
-npm run e2e:mock           # compiles tests/ and runs the suite
+npm run e2e:mock:prepare   # once: API clients, app (dist-mock/) and mock backend  (~1.5 min)
+npm run e2e:mock           # compiles tests/ and runs the suite                     (~1.5 min)
 npx playwright show-report e2e-tests/report
 ```
 
@@ -33,12 +33,19 @@ needed. `npm run mock-backend` beforehand is fine too — an already running ser
 ## Screenshots
 
 Baselines live in `e2e-tests/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.
-Every scenario runs in two projects, so each screenshot exists twice:
+Every scenario runs in four projects, so each screenshot exists four times:
 
-| Project | Viewport | Covers |
+| Project | Viewport | Theme |
 | --- | --- | --- |
-| `chromium` | 1280×800 | desktop layout |
-| `mobile` | 393×851 (Pixel 5, portrait) | below the mobile breakpoint (`$mobileTabSwitchWidth`, 900px): bottom navigation, collapsed toolbars |
+| `chromium` | 1280×800 | light |
+| `chromium-dark` | 1280×800 | dark |
+| `mobile` | 393×851 (Pixel 5, portrait) | light |
+| `mobile-dark` | 393×851 | dark |
+
+The phone viewport is below the mobile breakpoint (`$mobileTabSwitchWidth`, 900px), where the layout
+switches to the bottom navigation. The theme is handed over as `?theme=light|dark`, which takes
+priority over the stored accessibility setting (`ThemeService.registerDarkMode`); the browser's
+`prefers-color-scheme` is set to match.
 
 All pages are opened with **`locale=none`** (`AppPage.goto` appends it). The application then renders
 the raw i18n keys, which makes the baselines independent of the configured default language: a
@@ -62,6 +69,22 @@ so a new test can be merged before its baseline is recorded. Set `E2E_MOCK_REQUI
 (also a variable of the CI job) to turn a missing baseline into an error once everything is
 recorded.
 
+## Runtime
+
+The scenarios share nothing - each one logs in itself, and the mock backend keeps its state per
+session cookie, i.e. per browser context. The suite therefore runs `fullyParallel` with one worker
+per core (`workers: '100%'` in CI). Measured on 4 cores: 36 tests in ~80s parallel versus ~140s
+sequentially, with identical results - screenshot stability does not depend on machine speed.
+
+If the pipeline needs to be faster still, the run can be spread over several runners:
+
+```yaml
+e2e mock:
+  parallel: 3
+  script:
+    - npm run e2e:mock -- --shard=$CI_NODE_INDEX/$CI_NODE_TOTAL
+```
+
 ## What makes the run deterministic
 
 `tests/fixtures.ts` sets all of this up before the first navigation:
@@ -76,6 +99,7 @@ recorded.
 * fixed viewport per project, browser locale `de-DE`, timezone `UTC`, `colorScheme: light`,
   reduced motion
 * `tests/screenshot.css` disables animations, transitions, carets, ripples and scrollbars
+* the progress bar of the main nav is masked in every screenshot (`expectScreenshot` adds it)
 * all scroll positions are reset - node lists keep an internal scroll offset across navigations,
   which otherwise shifts a whole table by one row between runs
 
@@ -93,9 +117,10 @@ implement (HTTP 501).
 ## Adding a scenario
 
 1. Add a spec under `tests/scenarios/`, using the helpers from `../fixtures` (`test`, `settle`,
-   `expectScreenshot`) and `../pages/app.page.ts`. It has to hold up in **both** projects - do not
-   assert on elements of the main nav (the scope button is hidden on mobile), use
-   `app.expectPageShell()` and content assertions instead.
+   `expectScreenshot`) and the `app` fixture (an `AppPage` pre-configured with the project's
+   theme). It has to hold up in **all four** projects - do not assert on elements of the main nav
+   (the scope button is hidden on mobile) and not on colours; use `app.expectPageShell()` and
+   content assertions instead.
 2. If new REST endpoints are needed, implement them in the mock backend — `npm run e2e:mock` tells
    you which ones are missing.
 3. Record the baselines with `npm run e2e:mock:update:docker` and commit them.

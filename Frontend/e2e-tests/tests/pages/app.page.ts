@@ -14,18 +14,22 @@ export class AppPage {
     static readonly workspaceUrl = './components/workspace';
     static readonly collectionsUrl = './components/collections';
 
-    constructor(private readonly page: Page) {}
+    constructor(
+        private readonly page: Page,
+        private readonly theme: 'light' | 'dark' = 'light',
+    ) {}
 
     /**
-     * Opens a page with `locale=none`.
+     * Opens a page with `locale=none` and the project's theme.
      *
-     * In that language the application renders the raw i18n keys, which makes the baselines
+     * With `locale=none` the application renders the raw i18n keys, which makes the baselines
      * independent of the configured default language and of translation changes - only layout and
-     * data show up in a diff.
+     * data show up in a diff. `theme` overrides the stored dark-mode preference for this page view
+     * only (`ThemeService.registerDarkMode`).
      */
     async goto(url: string): Promise<void> {
         const separator = url.includes('?') ? '&' : '?';
-        await this.page.goto(`${url}${separator}locale=none`);
+        await this.page.goto(`${url}${separator}locale=none&theme=${this.theme}`);
         await settle(this.page);
     }
 

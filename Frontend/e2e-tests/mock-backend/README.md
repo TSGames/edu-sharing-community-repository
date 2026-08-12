@@ -5,7 +5,7 @@ It serves the built Angular application **and** a fixed set of REST responses fr
 the frontend can be validated in CI without Alfresco, Elasticsearch or Docker.
 
 ```
-npm run e2e:mock:prepare   # once: libraries + app (dist-mock/) + mock backend
+npm run e2e:mock:prepare   # once: API clients + app (dist-mock/) + mock backend
 npm run mock-backend       # http://127.0.0.1:4200/edu-sharing/
 ```
 

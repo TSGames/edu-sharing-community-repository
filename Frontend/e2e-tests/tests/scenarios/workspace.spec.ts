@@ -2,15 +2,13 @@ import { expect, expectScreenshot, settle, test } from '../fixtures';
 import { AppPage } from '../pages/app.page';
 
 test.describe('workspace', () => {
-    test.beforeEach(async ({ page }) => {
-        const app = new AppPage(page);
+    test.beforeEach(async ({ app, page }) => {
         await app.goto(AppPage.loginUrl);
         await app.login();
         await page.waitForURL(/components\/(workspace|search)/);
     });
 
-    test('lists the contents of the home folder', async ({ page }) => {
-        const app = new AppPage(page);
+    test('lists the contents of the home folder', async ({ app, page }) => {
         await app.goto(AppPage.workspaceUrl);
 
         await app.expectPageShell();
@@ -19,8 +17,7 @@ test.describe('workspace', () => {
         await expectScreenshot(app.mainContent, 'workspace-home.png');
     });
 
-    test('opens a folder', async ({ page }) => {
-        const app = new AppPage(page);
+    test('opens a folder', async ({ app, page }) => {
         await app.goto(AppPage.workspaceUrl);
         // The row of the node list, not the entry of the folder tree in the sidebar.
         await app.row('Unterrichtsmaterial').first().dblclick();
