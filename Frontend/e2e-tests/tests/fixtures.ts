@@ -130,6 +130,27 @@ export async function settle(page: Page): Promise<void> {
 }
 
 /**
+ * Waits until a container's content height stops changing.
+ *
+ * Images and lazily rendered widgets grow the content after `settle()` has returned. Measuring too
+ * early made the metadata editor's viewport end up at different heights between runs.
+ */
+async function waitForStableScrollHeight(scrollContainer: Locator): Promise<void> {
+    let previous = -1;
+    await expect
+        .poll(
+            async () => {
+                const current = await scrollContainer.evaluate((element) => element.scrollHeight);
+                const stable = current === previous;
+                previous = current;
+                return stable;
+            },
+            { intervals: [200, 200, 200, 400, 400, 800] },
+        )
+        .toBe(true);
+}
+
+/**
  * Grows the viewport until the given scroll container no longer scrolls.
  *
  * Used for the metadata editor: its dialog scrolls internally, so a normal screenshot would only
@@ -145,6 +166,7 @@ export async function expandViewportToFit(page: Page, scrollContainer: Locator):
     // closes part of the gap per round.
     let height = viewport.height;
     for (let round = 0; round < 10; round++) {
+        await waitForStableScrollHeight(scrollContainer);
         const missing = await scrollContainer.evaluate(
             (element) => element.scrollHeight - element.clientHeight,
         );

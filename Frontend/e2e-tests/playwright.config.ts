@@ -93,16 +93,21 @@ const config = defineConfig<MockOptions>({
             name: 'chromium',
             use: { ...desktop, ...light },
         },
+        // The dialog suite runs on desktop light only: on a phone nearly every dialog is full
+        // screen, and one baseline per dialog keeps the run fast.
         {
             name: 'chromium-dark',
+            testIgnore: '**/dialogs.spec.js',
             use: { ...desktop, ...dark },
         },
         {
             name: 'mobile',
+            testIgnore: '**/dialogs.spec.js',
             use: { ...mobile, ...light },
         },
         {
             name: 'mobile-dark',
+            testIgnore: '**/dialogs.spec.js',
             use: { ...mobile, ...dark },
         },
     ],

@@ -39,12 +39,49 @@ needed. `npm run mock-backend` beforehand is fine too — an already running ser
 | `workspace` | home folder, opening a folder |
 | `collections` | collection overview, collection with its references |
 | `mds` | the metadata editor with one widget of nearly every `MdsWidgetType` plus the native widgets, captured over its **full height** |
+| `dialogs` | nine dialogs of `DialogsService`, opened through the real UI (see below) |
 
 The metadata editor is a special case: its dialog scrolls internally, so `expandViewportToFit()`
 grows the viewport until the dialog no longer scrolls (and asserts that), instead of stitching
 several screenshots together. The baseline is therefore ~3600px high. The widget set lives in
 `mock-backend/src/fixtures/mds-io.ts`; a widget id must appear **once** across the whole mds, a
 duplicate is rendered twice by the editor.
+
+### Dialogs
+
+`DialogsService` (`src/app/features/dialogs/dialogs.service.ts`) has 45 `open*` methods. The suite
+covers those that are reachable **through the UI** and get by with the endpoints the mock already
+serves. They run in the `chromium` project only (`testIgnore` in `playwright.config.ts`): on a phone
+almost every dialog is full screen, and one baseline per dialog keeps the run short.
+
+| Dialog | Opened via |
+| --- | --- |
+| `openAccessibilityDialog` | user menu → `OPTIONS.ACCESSIBILITY` |
+| `openThirdPartyLicensesDialog` | user menu → `LICENSE_INFORMATION` |
+| `openNodeStoreDialog` | user menu → `SEARCH.NODE_STORE.TITLE` |
+| `openAddFolderDialog` | "+" create menu → `WORKSPACE.ADD_FOLDER` |
+| `openDeleteNodesDialog` | node context menu → `OPTIONS.DELETE` |
+| `openContributorsDialog` | node context menu → `OPTIONS.CONTRIBUTOR` |
+| `openShortcutManagementDialog` | node context menu → `OPTIONS.ADD_SHORTCUT` |
+| `openCreateVariantDialog` | node context menu → `OPTIONS.VARIANT` |
+| `openGenericDialog` (confirm/cancel) | metadata editor → change a value → Escape |
+
+Not covered, with the reason:
+
+| Reason | Dialogs |
+| --- | --- |
+| `OptionItem.scopes` limits them to the render or search page, which the mock does not serve | `openQrDialog`, `openNodeEmbedDialog`, `openNodeRelationsDialog`, `openNodeReportDialog` |
+| Would need endpoints the mock does not have | `openSimpleEditDialog` (`/iam/v1/authorities/{repo}/recent`), `openShareDialog` (same), `openWorkflowDialog` (`…/workflow`), `openNodeStoreDialog`'s "add" action (`…/nodeList/BASKET/{node}`), version management (`…/versions/metadata`), `openNodeTemplateDialog`, `openLicenseDialog` (needs `TOOLPERMISSION_LICENSE`), feedback dialogs |
+| Only reachable from another dialog, admin pages or drag&drop | `openShareHistoryDialog`, `openShareLinkDialog` (creates a share on open), `openContributorEditDialog`, `openInputDialog`, `openXmlAppPropertiesDialog`, `openCopyMoveDialog` |
+| External infrastructure or non-deterministic by nature | `openPreviewMediaDialog` (rendering service), `openAddWithConnectorDialog` / `openCreateLtiToolDialog` (popup windows), `openFileUploadProgressDialog` (uploads on open), `openFileChooserDialog` / `openJoinGroupDialog` (live typeahead, embedded browser) |
+
+Two findings from wiring this up, both in the application, not the tests:
+
+* the user-menu entry for `openNotificationDialog` is **commented out** in
+  `main-nav.component.ts` — the dialog currently has no UI path at all.
+* the confirmation before discarding editor changes only appears on **Escape / X button**, never on
+  the CANCEL button: the editor switches to `Closable.Confirm`, and that mode guards only those
+  triggers (`card-dialog/card-dialog-ref.ts`).
 
 ## Screenshots
 

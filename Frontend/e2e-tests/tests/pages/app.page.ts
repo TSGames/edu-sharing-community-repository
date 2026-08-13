@@ -73,6 +73,33 @@ export class AppPage {
         await this.row(pattern).first().click({ button: 'right' });
     }
 
+    /** Opens the "+" create menu of the top bar. */
+    async openCreateMenu(): Promise<void> {
+        await this.page.locator('[data-test="top-bar-add-button"]').first().click();
+    }
+
+    async openUserMenu(): Promise<void> {
+        await this.page.locator('[data-test="main-nav-user-menu-button"]').click();
+    }
+
+    /** Clicks an entry of an open menu. `name` is the `OptionItem.name`, i.e. its i18n key. */
+    async clickMenuItem(name: string): Promise<void> {
+        await this.page.locator(`[data-test="menu-item-${name}"]`).click();
+    }
+
+    /** The topmost open dialog. */
+    get dialog(): Locator {
+        return this.page.locator('es-card-dialog-container').last();
+    }
+
+    /** Waits for a dialog to be open and settled, and returns it. */
+    async expectDialog(): Promise<Locator> {
+        const dialog = this.dialog;
+        await expect(dialog).toBeVisible();
+        await settle(this.page);
+        return dialog;
+    }
+
     async searchInTopBar(term: string): Promise<void> {
         const field = this.page.locator('[data-test="top-bar-search-field"]');
         await field.fill(term);

@@ -37,6 +37,10 @@ const values: Values = {
         icon: null,
         title: 'edu-sharing (Mock)',
         currentScope: null,
+        // 'dropdown' puts the info entries (e.g. LICENSE_INFORMATION) into the user menu on
+        // desktop as well; with 'sidebar' they carry a max-width media query and only appear on
+        // small screens.
+        mainMenuStyle: 'dropdown',
     },
 };
 
