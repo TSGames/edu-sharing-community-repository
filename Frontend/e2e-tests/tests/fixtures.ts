@@ -130,6 +130,40 @@ export async function settle(page: Page): Promise<void> {
 }
 
 /**
+ * Grows the viewport until the given scroll container no longer scrolls.
+ *
+ * Used for the metadata editor: its dialog scrolls internally, so a normal screenshot would only
+ * show the part that happens to be visible. Enlarging the viewport instead of stitching keeps the
+ * screenshot a single, honest capture. Returns the height that was needed.
+ */
+export async function expandViewportToFit(page: Page, scrollContainer: Locator): Promise<number> {
+    const viewport = page.viewportSize();
+    if (!viewport) {
+        throw new Error('expandViewportToFit needs a fixed viewport');
+    }
+    // Iterative: the dialog's height is a fraction of the viewport, so growing the viewport only
+    // closes part of the gap per round.
+    let height = viewport.height;
+    for (let round = 0; round < 10; round++) {
+        const missing = await scrollContainer.evaluate(
+            (element) => element.scrollHeight - element.clientHeight,
+        );
+        if (missing <= 0) {
+            break;
+        }
+        // A little extra so the container is not exactly flush with the viewport edge.
+        height += missing + 40;
+        await page.setViewportSize({ width: viewport.width, height });
+        await settle(page);
+    }
+    // Proves the screenshot really shows everything.
+    await expect
+        .poll(() => scrollContainer.evaluate((el) => el.scrollHeight - el.clientHeight))
+        .toBeLessThanOrEqual(0);
+    return height;
+}
+
+/**
  * Compares a screenshot against the committed baseline.
  *
  * When no baseline exists yet the comparison is skipped with a warning instead of failing, so a

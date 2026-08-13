@@ -21,6 +21,8 @@ const chromiumLaunchOptions = {
 
 const desktop = {
     ...devices['Desktop Chrome'],
+    // After the device spread, otherwise its 1280x720 wins.
+    viewport: { width: 1280, height: 800 },
     launchOptions: chromiumLaunchOptions,
 };
 

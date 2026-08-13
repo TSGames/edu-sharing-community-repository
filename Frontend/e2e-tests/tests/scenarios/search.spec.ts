@@ -14,7 +14,7 @@ test.describe('search', () => {
         // First page of the fixed corpus: 10 materials, `Der Wasserkreislauf` among them.
         await expect(page.getByText('Der Wasserkreislauf').first()).toBeVisible();
         await expect(page.getByText('Bruchrechnen leicht gemacht').first()).toBeVisible();
-        await expectScreenshot(app.mainContent, 'search-results.png');
+        await expectScreenshot(page, 'search-results.png');
     });
 
     test('filters by the search term', async ({ app, page }) => {
@@ -24,6 +24,6 @@ test.describe('search', () => {
 
         await expect(page.getByText('Der Wasserkreislauf').first()).toBeVisible();
         await expect(page.getByText('Bruchrechnen leicht gemacht')).toHaveCount(0);
-        await expectScreenshot(app.mainContent, 'search-results-filtered.png');
+        await expectScreenshot(page, 'search-results-filtered.png');
     });
 });

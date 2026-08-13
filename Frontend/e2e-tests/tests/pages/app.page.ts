@@ -68,6 +68,11 @@ export class AppPage {
         return this.page.locator('[role="main"], .main-content').first();
     }
 
+    /** Opens the context menu of a node list row (right click, as in the real e2e suite). */
+    async openOptionsMenu(pattern: string | RegExp): Promise<void> {
+        await this.row(pattern).first().click({ button: 'right' });
+    }
+
     async searchInTopBar(term: string): Promise<void> {
         const field = this.page.locator('[data-test="top-bar-search-field"]');
         await field.fill(term);

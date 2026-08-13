@@ -30,9 +30,27 @@ npx playwright show-report e2e-tests/report
 `npm run e2e:mock` starts the mock backend itself (Playwright `webServer`); no separate terminal is
 needed. `npm run mock-backend` beforehand is fine too — an already running server is reused.
 
+## Scenarios
+
+| Spec | Covers |
+| --- | --- |
+| `login` | login form, rejected credentials, start page after login |
+| `search` | result list of the fixed corpus, filtering by search term |
+| `workspace` | home folder, opening a folder |
+| `collections` | collection overview, collection with its references |
+| `mds` | the metadata editor with one widget of nearly every `MdsWidgetType` plus the native widgets, captured over its **full height** |
+
+The metadata editor is a special case: its dialog scrolls internally, so `expandViewportToFit()`
+grows the viewport until the dialog no longer scrolls (and asserts that), instead of stitching
+several screenshots together. The baseline is therefore ~3600px high. The widget set lives in
+`mock-backend/src/fixtures/mds-io.ts`; a widget id must appear **once** across the whole mds, a
+duplicate is rendered twice by the editor.
+
 ## Screenshots
 
 Baselines live in `e2e-tests/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.
+They capture the **viewport**, not a single element: an element wider or taller than the viewport is
+clipped by Playwright, which cut off the rounded border of the content card.
 Every scenario runs in four projects, so each screenshot exists four times:
 
 | Project | Viewport | Theme |

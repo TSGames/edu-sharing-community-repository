@@ -158,6 +158,15 @@ export interface MdsWidget {
     isSearchable?: boolean;
     hasValues?: boolean;
     placeholder?: string;
+    allowValuespaceSuggestions?: boolean;
+    unit?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    defaultMin?: number;
+    defaultMax?: number;
+    isRequired?: string;
+    bottomCaption?: string;
 }
 
 export interface MdsView {

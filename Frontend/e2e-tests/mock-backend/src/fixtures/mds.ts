@@ -1,4 +1,5 @@
 import { Mds, MdsEntries } from '../models';
+import { ioGroups, ioViews, ioWidgets } from './mds-io';
 
 export const mdsEntries: MdsEntries = {
     metadatasets: [{ id: '-default-', name: 'default', label: 'Default' }],
@@ -37,23 +38,13 @@ export const defaultMds: Mds = {
             },
         },
     ],
+    // A widget id must appear only once - a duplicate is rendered twice by the editor.
     widgets: [
-        { id: 'cclom:title', caption: 'Titel', type: 'text', isSearchable: true },
         { id: 'cm:modified', caption: 'Geändert', type: 'date' },
         { id: 'ccm:commonlicense_key', caption: 'Lizenz', type: 'singleoption' },
         { id: 'ccm:replicationsource', caption: 'Quelle', type: 'text' },
-        {
-            id: 'ccm:educationalcontext',
-            caption: 'Bildungsstufe',
-            type: 'multivalueFixedBadges',
-            hasValues: true,
-            values: [
-                { id: 'grundschule', caption: 'Grundschule' },
-                { id: 'sekundarstufe_1', caption: 'Sekundarstufe I' },
-                { id: 'sonstiges', caption: 'Sonstiges' },
-            ],
-        },
         { id: 'ngsearchword', caption: 'Suchbegriff', type: 'text', isSearchable: true },
+        ...ioWidgets,
     ],
     views: [
         {
@@ -63,12 +54,14 @@ export const defaultMds: Mds = {
         },
         { id: 'search_suggestions', rel: 'suggestions', html: '' },
         { id: 'search_input', rel: 'suggestions', html: '' },
+        ...ioViews,
     ],
     // Group ids the search page looks up by name - `MdsEditorInstanceService` throws
     // "no such group" when one of them is missing.
     groups: [
         { id: 'ngsearch', rendering: 'angular', views: ['search', 'search_suggestions'] },
         { id: 'search_input', rendering: 'angular', views: ['search_input'] },
+        ...ioGroups,
     ],
     sorts: [
         {

@@ -13,7 +13,7 @@ test.describe('collections', () => {
 
         await expect(page.getByText('Mathematik Sek I').first()).toBeVisible();
         await expect(page.getByText('Naturwissenschaften').first()).toBeVisible();
-        await expectScreenshot(app.mainContent, 'collections-root.png');
+        await expectScreenshot(page, 'collections-root.png');
     });
 
     test('opens a collection and shows its references', async ({ app, page }) => {
@@ -22,6 +22,6 @@ test.describe('collections', () => {
         await settle(page);
 
         await expect(page.getByText('Bruchrechnen leicht gemacht').first()).toBeVisible();
-        await expectScreenshot(app.mainContent, 'collection-detail.png');
+        await expectScreenshot(page, 'collection-detail.png');
     });
 });

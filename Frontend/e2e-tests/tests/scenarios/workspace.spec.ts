@@ -14,7 +14,7 @@ test.describe('workspace', () => {
         await app.expectPageShell();
         await expect(app.row('Unterrichtsmaterial')).toBeVisible();
         await expect(app.row('Bilder')).toBeVisible();
-        await expectScreenshot(app.mainContent, 'workspace-home.png');
+        await expectScreenshot(page, 'workspace-home.png');
     });
 
     test('opens a folder', async ({ app, page }) => {
@@ -25,6 +25,6 @@ test.describe('workspace', () => {
 
         // `Unterrichtsmaterial` holds the last four materials of the corpus.
         await expect(app.row('Programmieren mit Scratch')).toBeVisible();
-        await expectScreenshot(app.mainContent, 'workspace-folder.png');
+        await expectScreenshot(page, 'workspace-folder.png');
     });
 });
