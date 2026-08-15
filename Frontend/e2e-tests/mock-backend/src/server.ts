@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as http from 'http';
 import * as path from 'path';
-import { config, REST_PREFIX } from './config';
+import { config, RENDERING2_PREFIX, REST_PREFIX } from './config';
 import { json, readBody, text } from './http';
-import { createApiRouter } from './routes';
+import { createApiRouter, createRendering2Router } from './routes';
 import { getSession } from './session';
 
 const MIME_TYPES: { [extension: string]: string } = {
@@ -94,6 +94,7 @@ function serveAsset(res: http.ServerResponse, pathname: string): boolean {
 
 export function createServer(): http.Server {
     const apiRouter = createApiRouter();
+    const rendering2Router = createRendering2Router();
 
     return http.createServer((req, res) => {
         void handle(req, res).catch((error) => {
@@ -138,7 +139,41 @@ export function createServer(): http.Server {
             return;
         }
 
-        // 2. static mock assets
+        // 2. rendering service 2 - a separate service, so it lives at the origin root next to
+        // `/edu-sharing`. A non-production build sends its requests to this dev proxy path.
+        if (pathname.startsWith(RENDERING2_PREFIX)) {
+            const rsPath = pathname.slice(RENDERING2_PREFIX.length).replace(/\/+$/, '') || '/';
+            // The rendered asset itself; the link the mock hands out points here.
+            if (rsPath.startsWith('/public/asset')) {
+                if (serveAsset(res, '/edu-sharing/preview/preview-1.png')) {
+                    return;
+                }
+            }
+            const rsMatch = rendering2Router.match(method, rsPath);
+            if (!rsMatch) {
+                logUnmocked(method, pathname);
+                json(
+                    res,
+                    {
+                        error: 'NotMockedException',
+                        message: `${method} ${rsPath} is not mocked (rendering service 2).`,
+                    },
+                    501,
+                );
+                return;
+            }
+            await rsMatch.handler({
+                req,
+                res,
+                params: rsMatch.params,
+                query: url.searchParams,
+                body: await readBody(req),
+                session: getSession(req),
+            });
+            return;
+        }
+
+        // 3. static mock assets
         if (
             pathname.startsWith('/edu-sharing/themes/') ||
             pathname.startsWith('/edu-sharing/preview/') ||
@@ -154,7 +189,7 @@ export function createServer(): http.Server {
             return;
         }
 
-        // 3. built Angular application
+        // 4. built Angular application
         if (pathname === '/' || pathname === '/edu-sharing') {
             res.writeHead(302, { Location: '/edu-sharing/' });
             res.end();
@@ -166,7 +201,7 @@ export function createServer(): http.Server {
                 sendFile(res, file);
                 return;
             }
-            // 4. SPA fallback
+            // 5. SPA fallback
             const index = resolveFile(config.distDir, 'index.html');
             if (index) {
                 sendFile(res, index);

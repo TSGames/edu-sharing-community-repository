@@ -30,6 +30,7 @@ export interface About {
     plugins?: { id: string }[];
     themesUrl?: string;
     lastCacheUpdate?: number;
+    renderingService2?: { url: string };
 }
 
 export interface Values {
@@ -318,6 +319,46 @@ export interface CollectionReference extends Node {
 export interface ReferenceEntries {
     references: CollectionReference[];
     pagination?: Pagination;
+}
+
+/** Signed node metadata, handed to rendering service 2 (`…/metadata/secured`). */
+export interface SignedNodeEntry {
+    node: Node;
+    jwt: string;
+    signedNode: string;
+    signature: string;
+    signatureAlgorithm?: string;
+    renderingBaseUrl?: string;
+}
+
+/** Rendering service 2 - schemas from `projects/rendering-service-api/src/lib/api/openapi.json`. */
+export interface ObjectLink {
+    width: number;
+    height: number;
+    link: string;
+}
+
+export interface RenderDataResponse {
+    deferred: boolean;
+    objectLinks?: ObjectLink[];
+    jobId?: string | null;
+    module?: string;
+}
+
+export interface JobProgressInfo {
+    quality: number;
+    progress: number;
+    status: 'QUEUED' | 'PROCESSING' | 'FINISHED' | 'FAILED' | 'TIMEOUT';
+    objectLink?: ObjectLink;
+    additionalData?: { [key: string]: string };
+    publicErrorMessage?: string;
+}
+
+export interface JobInfoReply {
+    status: 'QUEUED' | 'PROCESSING' | 'FINISHED' | 'FAILED' | 'PARTIALLY_FAILED';
+    jobs: JobProgressInfo[];
+    module?: string;
+    userMessage?: string;
 }
 
 export interface CollectionEntries {

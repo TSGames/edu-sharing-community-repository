@@ -8,6 +8,7 @@ import { registerMdsRoutes } from './mds.routes';
 import { registerMiscRoutes } from './misc.routes';
 import { registerNetworkRoutes } from './network.routes';
 import { registerNodeRoutes } from './node.routes';
+import { registerRendering2Routes } from './rendering2.routes';
 import { registerSearchRoutes } from './search.routes';
 
 /**
@@ -25,5 +26,15 @@ export function createApiRouter(): Router {
     registerNodeRoutes(router);
     registerCollectionRoutes(router);
     registerMiscRoutes(router);
+    return router;
+}
+
+/**
+ * Builds the router for rendering service 2. Paths are relative to `/rendering2`, which is where a
+ * non-production build sends its RS2 requests (see `RenderHelperService.prepareRootUrl`).
+ */
+export function createRendering2Router(): Router {
+    const router = new Router();
+    registerRendering2Routes(router);
     return router;
 }

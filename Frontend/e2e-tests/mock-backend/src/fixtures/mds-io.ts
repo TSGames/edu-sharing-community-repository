@@ -142,6 +142,19 @@ export const ioWidgets: MdsWidget[] = [
         defaultMax: 18,
     },
     { id: 'ccm:lifecyclecontributer_author', caption: 'Autor:in', type: 'vcard' },
+    // The native `<license>` widget takes its options from a widget definition of the same id and
+    // dereferences `definition.values` without a guard (`MdsEditorWidgetLicenseComponent.ngOnInit`).
+    {
+        id: 'license',
+        caption: 'Lizenz',
+        type: 'license',
+        hasValues: true,
+        values: [
+            { id: 'OPEN', caption: 'Frei zugänglich' },
+            { id: 'CC_BY_OPEN', caption: 'Creative Commons' },
+            { id: 'COPYRIGHT_OTHERS', caption: 'Urheberrechtlich geschützt' },
+        ],
+    },
 ];
 
 export const ioViews: MdsView[] = [
@@ -185,4 +198,6 @@ export const ioViews: MdsView[] = [
 export const ioGroups: MdsGroup[] = [
     { id: 'io', rendering: 'angular', views: ['node_general'] },
     { id: 'io_simple', rendering: 'angular', views: ['node_general'] },
+    // The metadata block below the renderer on the render2 page uses this group in viewer mode.
+    { id: 'io_render', rendering: 'angular', views: ['node_general'] },
 ];

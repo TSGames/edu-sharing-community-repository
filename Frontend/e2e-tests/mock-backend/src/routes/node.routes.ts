@@ -43,6 +43,25 @@ export function registerNodeRoutes(router: Router): void {
         json(res, { node });
     });
 
+    /**
+     * Signed metadata for rendering service 2. The signature is never verified by the frontend, it
+     * only forwards the values in the `renderdata` request body.
+     */
+    router.get('/node/v1/nodes/:repository/:node/metadata/secured', ({ res, params }) => {
+        const node = findNode(params.node);
+        if (!node) {
+            json(res, { error: 'NodeDoesNotExistException', message: params.node }, 404);
+            return;
+        }
+        json(res, {
+            node,
+            jwt: 'mock-jwt',
+            signedNode: 'e30=',
+            signature: 'mock-signature',
+            signatureAlgorithm: 'SHA256withRSA',
+        });
+    });
+
     router.get('/node/v1/nodes/:repository/:node/parents', ({ res, params }) => {
         const node = findNode(params.node);
         const parents: Node[] =

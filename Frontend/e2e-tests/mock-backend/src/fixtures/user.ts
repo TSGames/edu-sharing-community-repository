@@ -34,6 +34,8 @@ export const toolPermissions: string[] = [
     'TOOLPERMISSION_INVITE',
     'TOOLPERMISSION_CREATE_ELEMENTS_FOLDERS',
     'TOOLPERMISSION_CREATE_ELEMENTS_FILES',
+    // Without it the "relations" entry of the render page's actionbar stays disabled.
+    'TOOLPERMISSION_MANAGE_RELATIONS',
 ];
 
 export const repositories: RepoEntries = {

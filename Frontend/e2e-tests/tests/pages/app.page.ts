@@ -9,7 +9,12 @@ import { settle } from '../fixtures';
  * are the same `data-test` hooks though, so both suites break together when the markup changes.
  */
 export class AppPage {
+    /** `Der Wasserkreislauf` from the mock corpus - the node every node-related test works on. */
+    static readonly nodeId = '00000000-0000-4000-a000-000000000101';
+    static readonly nodeTitle = 'Der Wasserkreislauf';
+
     static readonly loginUrl = './components/login';
+    static readonly renderUrl = `./components/render/${AppPage.nodeId}`;
     static readonly searchUrl = './components/search';
     static readonly workspaceUrl = './components/workspace';
     static readonly collectionsUrl = './components/collections';
@@ -71,6 +76,11 @@ export class AppPage {
     /** Opens the context menu of a node list row (right click, as in the real e2e suite). */
     async openOptionsMenu(pattern: string | RegExp): Promise<void> {
         await this.row(pattern).first().click({ button: 'right' });
+    }
+
+    /** Opens the overflow menu ("...") of the actionbar, e.g. on the render page. */
+    async openActionbarMenu(): Promise<void> {
+        await this.page.locator('es-actionbar button').last().click();
     }
 
     /** Opens the "+" create menu of the top bar. */

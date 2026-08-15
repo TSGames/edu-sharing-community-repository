@@ -39,13 +39,37 @@ needed. `npm run mock-backend` beforehand is fine too — an already running ser
 | `workspace` | home folder, opening a folder |
 | `collections` | collection overview, collection with its references |
 | `mds` | the metadata editor with one widget of nearly every `MdsWidgetType` plus the native widgets, captured over its **full height** |
-| `dialogs` | nine dialogs of `DialogsService`, opened through the real UI (see below) |
+| `render` | the node detail page, rendered through a mocked **rendering service 2** |
+| `dialogs` | 13 dialogs of `DialogsService`, opened through the real UI (see below) |
 
 The metadata editor is a special case: its dialog scrolls internally, so `expandViewportToFit()`
 grows the viewport until the dialog no longer scrolls (and asserts that), instead of stitching
 several screenshots together. The baseline is therefore ~3600px high. The widget set lives in
 `mock-backend/src/fixtures/mds-io.ts`; a widget id must appear **once** across the whole mds, a
 duplicate is rendered twice by the editor.
+
+### Rendering service 2
+
+`components/render/:node` uses the render2 page, not the legacy renderer: the mocked `/_about`
+announces the `rendering-service-2` plugin. In a **non-production build**
+`RenderHelperService.prepareRootUrl()` pins the RS2 root to the dev proxy path `/rendering2`, so the
+mock serves RS2 at the **origin root** next to `/edu-sharing` - same origin, no proxy, no CORS
+(`mock-backend/src/routes/rendering2.routes.ts`, contract from the committed spec
+`projects/rendering-service-api/src/lib/api/openapi.json`).
+
+Two choices keep it deterministic:
+
+* `jobId: null` plus `objectLinks` - `RenderComponent` renders immediately instead of starting a
+  500ms polling interval.
+* `module: 'IMAGE'` with exactly **one** object link. It is the only module without moving parts:
+  video/audio mount media players, PDF the pdf viewer, H5P/Moodle/url an iframe. One link, because
+  `ImageComponent.loadOptimalSize()` otherwise picks by container width.
+
+`AssetLinkPipe` cuts the returned link at `/public` and prepends the current root url, so only the
+`/public/...` path matters - the mock answers `/rendering2/public/asset*` with a placeholder PNG.
+
+Not covered: the production URL resolution (`about.renderingService2.url` instead of `/rendering2`),
+every renderer module except `IMAGE`, and the legacy renderer (`?renderer=legacy`).
 
 ### Dialogs
 
@@ -65,12 +89,16 @@ almost every dialog is full screen, and one baseline per dialog keeps the run sh
 | `openShortcutManagementDialog` | node context menu → `OPTIONS.ADD_SHORTCUT` |
 | `openCreateVariantDialog` | node context menu → `OPTIONS.VARIANT` |
 | `openGenericDialog` (confirm/cancel) | metadata editor → change a value → Escape |
+| `openQrDialog` | render page → actionbar menu → `OPTIONS.QR_CODE` |
+| `openNodeEmbedDialog` | render page → actionbar menu → `OPTIONS.EMBED` |
+| `openNodeRelationsDialog` | render page → actionbar menu → `OPTIONS.RELATIONS` |
+| `openGenericDialog` (download metadata) | render page → actionbar menu → `OPTIONS.DOWNLOAD_METADATA` |
 
 Not covered, with the reason:
 
 | Reason | Dialogs |
 | --- | --- |
-| `OptionItem.scopes` limits them to the render or search page, which the mock does not serve | `openQrDialog`, `openNodeEmbedDialog`, `openNodeRelationsDialog`, `openNodeReportDialog` |
+| `OptionItem.scopes` limits them to the search page | `openNodeReportDialog` (also needs config `nodeReport: true`) |
 | Would need endpoints the mock does not have | `openSimpleEditDialog` (`/iam/v1/authorities/{repo}/recent`), `openShareDialog` (same), `openWorkflowDialog` (`…/workflow`), `openNodeStoreDialog`'s "add" action (`…/nodeList/BASKET/{node}`), version management (`…/versions/metadata`), `openNodeTemplateDialog`, `openLicenseDialog` (needs `TOOLPERMISSION_LICENSE`), feedback dialogs |
 | Only reachable from another dialog, admin pages or drag&drop | `openShareHistoryDialog`, `openShareLinkDialog` (creates a share on open), `openContributorEditDialog`, `openInputDialog`, `openXmlAppPropertiesDialog`, `openCopyMoveDialog` |
 | External infrastructure or non-deterministic by nature | `openPreviewMediaDialog` (rendering service), `openAddWithConnectorDialog` / `openCreateLtiToolDialog` (popup windows), `openFileUploadProgressDialog` (uploads on open), `openFileChooserDialog` / `openJoinGroupDialog` (live typeahead, embedded browser) |

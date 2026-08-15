@@ -131,3 +131,49 @@ test.describe('dialogs from the workspace', () => {
         await screenshotDialog(page, dialog, 'dialog-discard-changes.png');
     });
 });
+
+/**
+ * Dialogs that `OptionItem.scopes` restricts to `Scope.Render`, i.e. they only exist on the node
+ * detail page. That page renders through the mocked rendering service 2 (see `render.spec.ts`).
+ */
+test.describe('dialogs from the render page', () => {
+    test.beforeEach(async ({ app, page }) => {
+        await app.goto(AppPage.loginUrl);
+        await app.login();
+        await page.waitForURL(/components\/(workspace|search)/);
+        await app.goto(AppPage.renderUrl);
+        await expect(page.locator('rs-root img')).toBeVisible();
+    });
+
+    test('qr code', async ({ app, page }) => {
+        await app.openActionbarMenu();
+        await app.clickMenuItem('OPTIONS.QR_CODE');
+
+        const dialog = await app.expectDialog();
+        await screenshotDialog(page, dialog, 'dialog-qr-code.png');
+    });
+
+    test('embed node', async ({ app, page }) => {
+        await app.openActionbarMenu();
+        await app.clickMenuItem('OPTIONS.EMBED');
+
+        const dialog = await app.expectDialog();
+        await screenshotDialog(page, dialog, 'dialog-node-embed.png');
+    });
+
+    test('node relations', async ({ app, page }) => {
+        await app.openActionbarMenu();
+        await app.clickMenuItem('OPTIONS.RELATIONS');
+
+        const dialog = await app.expectDialog();
+        await screenshotDialog(page, dialog, 'dialog-node-relations.png');
+    });
+
+    test('download metadata', async ({ app, page }) => {
+        await app.openActionbarMenu();
+        await app.clickMenuItem('OPTIONS.DOWNLOAD_METADATA');
+
+        const dialog = await app.expectDialog();
+        await screenshotDialog(page, dialog, 'dialog-download-metadata.png');
+    });
+});

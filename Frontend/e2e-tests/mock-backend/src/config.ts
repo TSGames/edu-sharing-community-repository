@@ -29,3 +29,9 @@ export const config = {
 };
 
 export const REST_PREFIX = '/edu-sharing/rest';
+
+/**
+ * Root of rendering service 2. `RenderHelperService.prepareRootUrl()` pins this path in every
+ * non-production build, so it is served at the origin root, not below `/edu-sharing`.
+ */
+export const RENDERING2_PREFIX = '/rendering2';

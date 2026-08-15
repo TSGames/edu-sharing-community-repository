@@ -10,10 +10,14 @@ export const about: About = {
             instances: [{ endpoint: '/edu-sharing/rest', version }],
         },
     ],
-    // Keep both empty: every plugin/feature the frontend discovers here pulls in further
-    // endpoints (suggestions, rendering service 2, b-api, ...) that this mock does not serve.
     features: [],
-    plugins: [],
+    // `rendering-service-2` makes `RenderMainPageComponent` load the render2 page instead of the
+    // legacy renderer; `renderingService2.url` must be a non-null object or `prepareRootUrl()`
+    // throws. In a non-production build the url itself is unused - the requests go to the dev
+    // proxy path `/rendering2`, which this mock serves at the origin root.
+    // Any further plugin would pull in endpoints this mock does not serve.
+    plugins: [{ id: 'rendering-service-2' }],
+    renderingService2: { url: 'http://127.0.0.1:4200/rendering2' },
     themesUrl: '/edu-sharing/themes/default',
     lastCacheUpdate: 0,
 };
