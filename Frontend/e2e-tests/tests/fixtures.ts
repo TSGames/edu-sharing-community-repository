@@ -153,11 +153,18 @@ async function waitForStableScrollHeight(scrollContainer: Locator): Promise<void
 /**
  * Grows the viewport until the given scroll container no longer scrolls.
  *
+ * With `assertFits: false` a dialog that cannot grow (fixed max height) is accepted as it is - the
+ * screenshot then shows it the way a user sees it, scrolled to the top.
+ *
  * Used for the metadata editor: its dialog scrolls internally, so a normal screenshot would only
  * show the part that happens to be visible. Enlarging the viewport instead of stitching keeps the
  * screenshot a single, honest capture. Returns the height that was needed.
  */
-export async function expandViewportToFit(page: Page, scrollContainer: Locator): Promise<number> {
+export async function expandViewportToFit(
+    page: Page,
+    scrollContainer: Locator,
+    { assertFits = true }: { assertFits?: boolean } = {},
+): Promise<number> {
     const viewport = page.viewportSize();
     if (!viewport) {
         throw new Error('expandViewportToFit needs a fixed viewport');
@@ -165,6 +172,7 @@ export async function expandViewportToFit(page: Page, scrollContainer: Locator):
     // Iterative: the dialog's height is a fraction of the viewport, so growing the viewport only
     // closes part of the gap per round.
     let height = viewport.height;
+    let previousMissing = Number.POSITIVE_INFINITY;
     for (let round = 0; round < 10; round++) {
         await waitForStableScrollHeight(scrollContainer);
         const missing = await scrollContainer.evaluate(
@@ -173,15 +181,23 @@ export async function expandViewportToFit(page: Page, scrollContainer: Locator):
         if (missing <= 0) {
             break;
         }
+        if (missing >= previousMissing) {
+            // No progress: the dialog has a fixed max height and does not grow with the viewport.
+            // Nothing more to gain - the caller decides whether that is acceptable.
+            break;
+        }
+        previousMissing = missing;
         // A little extra so the container is not exactly flush with the viewport edge.
         height += missing + 40;
         await page.setViewportSize({ width: viewport.width, height });
         await settle(page);
     }
-    // Proves the screenshot really shows everything.
-    await expect
-        .poll(() => scrollContainer.evaluate((el) => el.scrollHeight - el.clientHeight))
-        .toBeLessThanOrEqual(0);
+    if (assertFits) {
+        // Proves the screenshot really shows everything.
+        await expect
+            .poll(() => scrollContainer.evaluate((el) => el.scrollHeight - el.clientHeight))
+            .toBeLessThanOrEqual(0);
+    }
     return height;
 }
 

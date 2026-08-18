@@ -40,7 +40,7 @@ needed. `npm run mock-backend` beforehand is fine too — an already running ser
 | `collections` | collection overview, collection with its references |
 | `mds` | the metadata editor with one widget of nearly every `MdsWidgetType` plus the native widgets, captured over its **full height** |
 | `render` | the node detail page, rendered through a mocked **rendering service 2** |
-| `dialogs` | 13 dialogs of `DialogsService`, opened through the real UI (see below) |
+| `dialogs` | 15 dialogs of `DialogsService`, opened through the real UI (see below) |
 
 The metadata editor is a special case: its dialog scrolls internally, so `expandViewportToFit()`
 grows the viewport until the dialog no longer scrolls (and asserts that), instead of stitching
@@ -88,6 +88,8 @@ almost every dialog is full screen, and one baseline per dialog keeps the run sh
 | `openContributorsDialog` | node context menu → `OPTIONS.CONTRIBUTOR` |
 | `openShortcutManagementDialog` | node context menu → `OPTIONS.ADD_SHORTCUT` |
 | `openCreateVariantDialog` | node context menu → `OPTIONS.VARIANT` |
+| `openShareDialog` | node context menu → `OPTIONS.INVITE` |
+| `openSimpleEditDialog` | node context menu → `OPTIONS.EDIT_SIMPLE` |
 | `openGenericDialog` (confirm/cancel) | metadata editor → change a value → Escape |
 | `openQrDialog` | render page → actionbar menu → `OPTIONS.QR_CODE` |
 | `openNodeEmbedDialog` | render page → actionbar menu → `OPTIONS.EMBED` |
@@ -99,9 +101,19 @@ Not covered, with the reason:
 | Reason | Dialogs |
 | --- | --- |
 | `OptionItem.scopes` limits them to the search page | `openNodeReportDialog` (also needs config `nodeReport: true`) |
-| Would need endpoints the mock does not have | `openSimpleEditDialog` (`/iam/v1/authorities/{repo}/recent`), `openShareDialog` (same), `openWorkflowDialog` (`…/workflow`), `openNodeStoreDialog`'s "add" action (`…/nodeList/BASKET/{node}`), version management (`…/versions/metadata`), `openNodeTemplateDialog`, `openLicenseDialog` (needs `TOOLPERMISSION_LICENSE`), feedback dialogs |
+| Would need endpoints the mock does not have | `openWorkflowDialog` (`…/workflow`), `openNodeStoreDialog`'s "add" action (`…/nodeList/BASKET/{node}`), version management (`…/versions/metadata`), `openNodeTemplateDialog` (`…/metadata/template`), `openLicenseDialog` (needs `TOOLPERMISSION_LICENSE`), feedback dialogs (`/feedback/v1/…`) |
 | Only reachable from another dialog, admin pages or drag&drop | `openShareHistoryDialog`, `openShareLinkDialog` (creates a share on open), `openContributorEditDialog`, `openInputDialog`, `openXmlAppPropertiesDialog`, `openCopyMoveDialog` |
 | External infrastructure or non-deterministic by nature | `openPreviewMediaDialog` (rendering service), `openAddWithConnectorDialog` / `openCreateLtiToolDialog` (popup windows), `openFileUploadProgressDialog` (uploads on open), `openFileChooserDialog` / `openJoinGroupDialog` (live typeahead, embedded browser) |
+
+Share and simple edit are mocked with **content**, the way the metadata editor is: the permission
+list (`mock-backend/src/fixtures/authorities.ts`) holds the owner, an invited user, a group and one
+inherited entry, so the screenshot covers all three authority kinds instead of an empty list. Both
+dialogs need `GET /iam/v1/authorities/{repo}/recent` before they render.
+
+Not every dialog can be captured in full: some have a fixed maximum height and stay scrollable no
+matter how tall the viewport gets (simple edit is one). `expandViewportToFit(…, { assertFits: false })`
+accepts that and captures them scrolled to the top; only the metadata editor insists on fitting
+completely.
 
 Two findings from wiring this up, both in the application, not the tests:
 

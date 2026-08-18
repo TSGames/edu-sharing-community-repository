@@ -12,11 +12,17 @@ import { AppPage } from '../pages/app.page';
  * phone almost every dialog is full screen, and the desktop baseline is where regressions show.
  */
 
-/** Every dialog is at most as tall as the viewport allows; grow it when it scrolls internally. */
+/**
+ * Screenshots a dialog, growing the viewport so as much of it as possible is visible.
+ *
+ * Unlike the metadata editor, some dialogs have a fixed maximum height and stay scrollable no
+ * matter how tall the viewport gets (simple edit is one). Those are captured scrolled to the top
+ * instead of failing - `settle()` resets the scroll position, so it stays deterministic.
+ */
 async function screenshotDialog(page: any, dialog: any, name: string): Promise<void> {
     const content = dialog.locator('.card-content').first();
     if ((await content.count()) > 0) {
-        await expandViewportToFit(page, content);
+        await expandViewportToFit(page, content, { assertFits: false });
     }
     await expectScreenshot(page, name);
 }
@@ -76,7 +82,7 @@ test.describe('dialogs from the workspace', () => {
     });
 
     test('delete nodes', async ({ app, page }) => {
-        await app.openOptionsMenu('Der Wasserkreislauf');
+        await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.DELETE');
 
         const dialog = await app.expectDialog();
@@ -86,7 +92,7 @@ test.describe('dialogs from the workspace', () => {
     });
 
     test('contributors', async ({ app, page }) => {
-        await app.openOptionsMenu('Der Wasserkreislauf');
+        await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.CONTRIBUTOR');
 
         const dialog = await app.expectDialog();
@@ -94,15 +100,42 @@ test.describe('dialogs from the workspace', () => {
     });
 
     test('shortcut management', async ({ app, page }) => {
-        await app.openOptionsMenu('Der Wasserkreislauf');
+        await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.ADD_SHORTCUT');
 
         const dialog = await app.expectDialog();
         await screenshotDialog(page, dialog, 'dialog-shortcut-management.png');
     });
 
+    /**
+     * The share dialog - the widest dialog surface in the application. The mocked permissions are
+     * populated on purpose (owner, an invited user, a group, one inherited entry), so the screenshot
+     * covers the rendering of all three authority kinds instead of an empty list.
+     */
+    test('share (invite)', async ({ app, page }) => {
+        await app.openOptionsMenu(AppPage.nodeTitle);
+        await app.clickMenuItem('OPTIONS.INVITE');
+
+        const dialog = await app.expectDialog();
+        await expect(dialog.getByText('Maxi Musterfrau').first()).toBeVisible();
+        await expect(dialog.getByText('Lehrkräfte').first()).toBeVisible();
+        await expect(dialog.getByText('Alle registrierten Nutzer:innen').first()).toBeVisible();
+        await screenshotDialog(page, dialog, 'dialog-share.png');
+    });
+
+    test('simple edit', async ({ app, page }) => {
+        await app.openOptionsMenu(AppPage.nodeTitle);
+        await app.clickMenuItem('OPTIONS.EDIT_SIMPLE');
+
+        const dialog = await app.expectDialog();
+        await expect(page.locator('[data-test="more-metadata-button"]')).toBeVisible();
+        // Values come from the node fixture, not from an empty form.
+        await expect(dialog.getByText(AppPage.nodeTitle).first()).toBeVisible();
+        await screenshotDialog(page, dialog, 'dialog-simple-edit.png');
+    });
+
     test('create variant', async ({ app, page }) => {
-        await app.openOptionsMenu('Der Wasserkreislauf');
+        await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.VARIANT');
 
         const dialog = await app.expectDialog();
@@ -119,7 +152,7 @@ test.describe('dialogs from the workspace', () => {
      * (`card-dialog-ref.ts`).
      */
     test('generic confirm dialog when discarding changes', async ({ app, page }) => {
-        await app.openOptionsMenu('Der Wasserkreislauf');
+        await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.EDIT');
         const editor = await app.expectDialog();
 

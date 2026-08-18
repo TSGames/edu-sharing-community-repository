@@ -1,3 +1,4 @@
+import { recentAuthorities } from '../fixtures/authorities';
 import { userEntry } from '../fixtures/user';
 import { json, noContent } from '../http';
 import { Router } from '../router';
@@ -41,6 +42,28 @@ export function registerIamRoutes(router: Router): void {
     );
 
     router.get('/iam/v1/people/:repository/:person/dataprotection', ({ res }) => json(res, {}));
+
+    /**
+     * Recently invited authorities - the share dialog and the simple-edit invite tab both request
+     * this before they render.
+     */
+    router.get('/iam/v1/authorities/:repository/recent', ({ res }) => json(res, recentAuthorities));
+
+    router.get('/iam/v1/authorities/:repository', ({ res }) => json(res, recentAuthorities));
+
+    router.get('/iam/v1/groups/:repository/:group', ({ res, params }) =>
+        json(res, {
+            group: {
+                authorityName: params.group,
+                authorityType: 'GROUP',
+                profile: { displayName: 'Lehrkräfte', groupType: 'Lehrkräfte' },
+            },
+        }),
+    );
+
+    router.get('/iam/v1/groups/:repository', ({ res }) =>
+        json(res, { groups: [], pagination: { total: 0, from: 0, count: 0 } }),
+    );
 
     router.get('/iam/v1/people/:repository', ({ res }) =>
         json(res, { users: [], pagination: { total: 0, from: 0, count: 0 } }),

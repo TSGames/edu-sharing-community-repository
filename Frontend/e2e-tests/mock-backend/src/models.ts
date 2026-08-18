@@ -361,6 +361,41 @@ export interface JobInfoReply {
     userMessage?: string;
 }
 
+/** Authorities as returned by `/iam/v1/authorities/{repo}/recent` and used in permission lists. */
+export interface Authority {
+    authorityName: string;
+    authorityType?: string;
+    editable?: boolean;
+    properties?: { [key: string]: string[] };
+}
+
+export interface AuthorityEntries {
+    authorities: Authority[];
+    pagination: Pagination;
+}
+
+export interface GroupProfile {
+    displayName?: string;
+    groupType?: string;
+    scopeType?: string;
+    groupEmail?: string;
+}
+
+export interface Ace {
+    authority: Authority;
+    permissions: string[];
+    editable?: boolean;
+    user?: UserProfile;
+    group?: GroupProfile;
+}
+
+export interface NodePermissionEntry {
+    permissions: {
+        localPermissions: { inherited: boolean; permissions: Ace[] };
+        inheritedPermissions: Ace[];
+    };
+}
+
 export interface CollectionEntries {
     collections: Node[];
     pagination?: Pagination;

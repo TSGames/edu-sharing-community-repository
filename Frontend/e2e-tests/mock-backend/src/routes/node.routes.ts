@@ -1,4 +1,5 @@
 import { paginate, USER_HOME_ID } from '../fixtures/builders';
+import { nodePermissions } from '../fixtures/authorities';
 import { childrenOf, findNode, userHomeFolder } from '../fixtures/nodes';
 import { json, noContent } from '../http';
 import { Node } from '../models';
@@ -69,10 +70,14 @@ export function registerNodeRoutes(router: Router): void {
         json(res, { nodes: parents, scope: 'MY_FILES' });
     });
 
+    // Populated on purpose - the share dialog renders this list as its "invited" tab.
     router.get('/node/v1/nodes/:repository/:node/permissions', ({ res }) =>
-        json(res, {
-            permissions: { localPermissions: { inherited: true, permissions: [] }, inheritedPermissions: [] },
-        }),
+        json(res, nodePermissions),
+    );
+
+    /** Permissions of a single authority; the share dialog checks the configured receiver. */
+    router.get('/node/v1/nodes/:repository/:node/permissions/:authority', ({ res }) =>
+        json(res, ['Coordinator']),
     );
 
     router.get('/node/v1/nodes/:repository/:node/shares', ({ res }) => json(res, []));
