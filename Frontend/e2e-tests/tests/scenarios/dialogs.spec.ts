@@ -109,8 +109,9 @@ test.describe('dialogs from the workspace', () => {
 
     /**
      * The share dialog - the widest dialog surface in the application. The mocked permissions are
-     * populated on purpose (owner, an invited user, a group, one inherited entry), so the screenshot
-     * covers the rendering of all three authority kinds instead of an empty list.
+     * populated on purpose, so the screenshot covers every authority kind a permission list can
+     * hold instead of an empty list: the owner, an invited user, a group, and "everyone" (which
+     * the dialog renders as its own "published" row).
      */
     test('share (invite)', async ({ app, page }) => {
         await app.openOptionsMenu(AppPage.nodeTitle);
@@ -119,10 +120,24 @@ test.describe('dialogs from the workspace', () => {
         const dialog = await app.expectDialog();
         await expect(dialog.getByText('Maxi Musterfrau').first()).toBeVisible();
         await expect(dialog.getByText('Lehrkräfte').first()).toBeVisible();
-        await expect(dialog.getByText('Alle registrierten Nutzer:innen').first()).toBeVisible();
+        await expect(dialog.getByText('WORKSPACE.SHARE.PUBLISH_ENABLED').first()).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-share.png');
     });
 
+    /**
+     * Simple edit - three sections, each of which replaces itself with an info box when its
+     * preconditions are not met. The mock is set up so all three render their real controls:
+     *
+     * - metadata: the mds group `io_simple` (deliberately a short view, two widgets)
+     * - invite: the parent folder is not shared, so the toggles are offered instead of
+     *   `SIMPLE_EDIT.INVITE.ERROR_INHERIT`
+     * - license: `TOOLPERMISSION_LICENSE` plus a CC BY 4.0 license on the node, so the source and
+     *   license toggles are offered instead of `SIMPLE_EDIT.LICENSE.INVALID_STATE`
+     *
+     * With `locale=none` the toggle labels are raw i18n keys and therefore much wider than the
+     * translated ones; that they overflow their group is a property of the labels, not a defect
+     * the baseline should hide.
+     */
     test('simple edit', async ({ app, page }) => {
         await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.EDIT_SIMPLE');
@@ -131,7 +146,75 @@ test.describe('dialogs from the workspace', () => {
         await expect(page.locator('[data-test="more-metadata-button"]')).toBeVisible();
         // Values come from the node fixture, not from an empty form.
         await expect(dialog.getByText(AppPage.nodeTitle).first()).toBeVisible();
+        // Exactly the two widgets of the `io_simple` view.
+        await expect(dialog.locator('es-mds-editor-widget-container')).toHaveCount(2);
+        // Both other sections show their options, not their blocked state.
+        await expect(dialog.locator('es-simple-edit-invite mat-button-toggle-group')).toHaveCount(2);
+        await expect(dialog.locator('es-simple-edit-license mat-button-toggle-group')).toHaveCount(
+            2,
+        );
+        await expect(dialog.locator('es-info-message')).toHaveCount(0);
         await screenshotDialog(page, dialog, 'dialog-simple-edit.png');
+    });
+
+    /**
+     * The license editor - the largest single form of the application after the metadata editor.
+     * The node carries a CC BY 4.0 license, so the dialog opens on the Creative Commons branch
+     * with its attribution fields instead of the empty default.
+     */
+    test('license', async ({ app, page }) => {
+        await app.openOptionsMenu(AppPage.nodeTitle);
+        await app.clickMenuItem('OPTIONS.LICENSE');
+
+        const dialog = await app.expectDialog();
+        // The node's CC BY license preselects its radio button - an empty form would select none.
+        await expect(
+            dialog.locator('mat-radio-button.mat-mdc-radio-checked').first(),
+        ).toBeVisible();
+        await screenshotDialog(page, dialog, 'dialog-license.png');
+    });
+
+    /**
+     * The workflow dialog. Its history below the form comes from the mocked
+     * `GET .../workflow`; the status list needs no configuration, `NodeHelperService.getWorkflows()`
+     * falls back to the four built-in states.
+     */
+    test('workflow', async ({ app, page }) => {
+        await app.openOptionsMenu(AppPage.nodeTitle);
+        await app.clickMenuItem('OPTIONS.WORKFLOW');
+
+        const dialog = await app.expectDialog();
+        // Both history entries, i.e. the mocked history was applied.
+        await expect(dialog.getByText('Bitte fachlich prüfen.')).toBeVisible();
+        await expect(dialog.getByText('Erstfassung hochgeladen.')).toBeVisible();
+        await screenshotDialog(page, dialog, 'dialog-workflow.png');
+    });
+
+    /** The only dialog of the suite that acts on a *folder* rather than a file. */
+    test('folder template', async ({ app, page }) => {
+        await app.openOptionsMenu('Unterrichtsmaterial');
+        await app.clickMenuItem('OPTIONS.TEMPLATE');
+
+        const dialog = await app.expectDialog();
+        await screenshotDialog(page, dialog, 'dialog-node-template.png');
+    });
+
+    /**
+     * The share history, reachable only from inside the share dialog. The mocked history is built
+     * so that all three change kinds the dialog can render appear: added, modified, removed.
+     */
+    test('share history', async ({ app, page }) => {
+        await app.openOptionsMenu(AppPage.nodeTitle);
+        await app.clickMenuItem('OPTIONS.INVITE');
+        await app.expectDialog();
+
+        await page.getByText('WORKSPACE.SHARE.SHOW_HISTORY').click();
+        const dialog = await app.expectDialog();
+        // All three change kinds the dialog knows.
+        await expect(dialog.getByText('WORKSPACE.SHARE.HISTORY.ADDED').first()).toBeVisible();
+        await expect(dialog.getByText('WORKSPACE.SHARE.HISTORY.CHANGED').first()).toBeVisible();
+        await expect(dialog.getByText('WORKSPACE.SHARE.HISTORY.REMOVED').first()).toBeVisible();
+        await screenshotDialog(page, dialog, 'dialog-share-history.png');
     });
 
     test('create variant', async ({ app, page }) => {
@@ -162,6 +245,41 @@ test.describe('dialogs from the workspace', () => {
         const dialog = await app.expectDialog();
         await expect(page.locator('[data-test="dialog-button-DISCARD"]')).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-discard-changes.png');
+    });
+});
+
+/**
+ * Dialogs that `OptionItem.scopes` restricts to the search page.
+ */
+test.describe('dialogs from the search page', () => {
+    test.beforeEach(async ({ app, page }) => {
+        await app.goto(AppPage.loginUrl);
+        await app.login();
+        await page.waitForURL(/components\/(workspace|search)/);
+        await app.goto(AppPage.searchUrl);
+    });
+
+    /** Gated by the config flag `nodeReport`, which the mock switches on. */
+    test('node report', async ({ app, page }) => {
+        await app.openCardOptionsMenu(AppPage.nodeTitle);
+        await app.clickMenuItem('OPTIONS.NODE_REPORT');
+
+        const dialog = await app.expectDialog();
+        await screenshotDialog(page, dialog, 'dialog-node-report.png');
+    });
+
+    /**
+     * The saved searches of the mock corpus, listed by `SavedSearchesService`. Its button lives in
+     * the filter sidebar, which the search page keeps collapsed until the edge handle opens it.
+     */
+    test('saved searches', async ({ app, page }) => {
+        await page.locator('.edge-toggle.side-start').click();
+        await page.locator('.saved-searches-button').click();
+
+        const dialog = await app.expectDialog();
+        await expect(dialog.getByText('Wasser').first()).toBeVisible();
+        await expect(dialog.getByText('Geometrie').first()).toBeVisible();
+        await screenshotDialog(page, dialog, 'dialog-saved-searches.png');
     });
 });
 

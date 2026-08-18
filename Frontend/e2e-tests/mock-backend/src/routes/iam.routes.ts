@@ -51,6 +51,21 @@ export function registerIamRoutes(router: Router): void {
 
     router.get('/iam/v1/authorities/:repository', ({ res }) => json(res, recentAuthorities));
 
+    /**
+     * Subgroup of an organization by group type - requested by the simple-edit invite section for
+     * every configured `simpleEdit.organization.groupTypes` entry. `profile.groupType` must echo
+     * the requested type: the component keys its lookup table by it.
+     */
+    router.get('/iam/v1/groups/:repository/:group/type/:type', ({ res, params }) =>
+        json(res, {
+            group: {
+                authorityName: `GROUP_${params.type}_${params.group.replace(/^GROUP_/, '')}`,
+                authorityType: 'GROUP',
+                profile: { displayName: 'Musterschule Administration', groupType: params.type },
+            },
+        }),
+    );
+
     router.get('/iam/v1/groups/:repository/:group', ({ res, params }) =>
         json(res, {
             group: {

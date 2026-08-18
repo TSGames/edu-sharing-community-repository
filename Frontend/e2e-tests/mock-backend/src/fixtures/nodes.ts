@@ -38,7 +38,10 @@ export const files: Node[] = fileTitles.map((title, index) =>
         title,
         previewIndex: (index % 5) + 1,
         size: 100000 + index * 4096,
-        license: index % 3 === 0 ? 'CC_BY' : index % 3 === 1 ? 'CC_BY_SA' : 'COPYRIGHT_FREE',
+        // `Der Wasserkreislauf` (index 1) is the node every node test works on and it must carry
+        // a license the simple-edit dialog accepts - `simpleEdit.licenses` defaults to
+        // NONE / COPYRIGHT_FREE / CC_BY / CC_0.
+        license: ['CC_BY_SA', 'CC_BY', 'COPYRIGHT_FREE'][index % 3],
     }),
 );
 
@@ -70,5 +73,39 @@ export function childrenOf(id: string): Node[] {
     if (id === '-userhome-' || id === USER_HOME_ID) {
         return userHomeChildren;
     }
+    if (id === '-saved_search-') {
+        return savedSearches;
+    }
     return folderChildren[id] ?? [];
 }
+
+/**
+ * Saved searches.
+ *
+ * They are ordinary nodes of type `ccm:saved_search` below the virtual folder `-saved_search-`.
+ * `SavedSearchesService` parses `ccm:saved_search_parameters` as the JSON criteria array of the
+ * stored search, so it has to be valid JSON - the dialog crashes on anything else.
+ */
+export const savedSearches: Node[] = [
+    { id: '00000000-0000-4000-a000-000000000201', title: 'Wasser', searchWord: 'wasser' },
+    { id: '00000000-0000-4000-a000-000000000202', title: 'Geometrie', searchWord: 'geometrie' },
+    { id: '00000000-0000-4000-a000-000000000203', title: 'Alle Materialien', searchWord: '*' },
+].map(({ id, title, searchWord }) => {
+    const node = makeFile({ id, name: title, title });
+    return {
+        ...node,
+        type: 'ccm:saved_search',
+        mediatype: 'saved_search',
+        mimetype: undefined,
+        parent: { ...node.parent!, id: '-saved_search-' },
+        properties: {
+            ...node.properties,
+            'cclom:title': [title],
+            'ccm:saved_search_repository': ['-home-'],
+            'ccm:saved_search_mds': ['-default-'],
+            'ccm:saved_search_parameters': [
+                JSON.stringify([{ property: 'ngsearchword', values: [searchWord] }]),
+            ],
+        },
+    };
+});

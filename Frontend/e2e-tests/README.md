@@ -90,6 +90,12 @@ almost every dialog is full screen, and one baseline per dialog keeps the run sh
 | `openCreateVariantDialog` | node context menu → `OPTIONS.VARIANT` |
 | `openShareDialog` | node context menu → `OPTIONS.INVITE` |
 | `openSimpleEditDialog` | node context menu → `OPTIONS.EDIT_SIMPLE` |
+| `openLicenseDialog` | node context menu → `OPTIONS.LICENSE` |
+| `openWorkflowDialog` | node context menu → `OPTIONS.WORKFLOW` |
+| `openNodeTemplateDialog` | **folder** context menu → `OPTIONS.TEMPLATE` |
+| `openShareHistoryDialog` | share dialog → `WORKSPACE.SHARE.SHOW_HISTORY` |
+| `openNodeReportDialog` | search page → node context menu → `OPTIONS.NODE_REPORT` |
+| `openSavedSearchesDialog` | search page → filter sidebar → `SEARCH.SAVED_SEARCHES.TITLE` |
 | `openGenericDialog` (confirm/cancel) | metadata editor → change a value → Escape |
 | `openQrDialog` | render page → actionbar menu → `OPTIONS.QR_CODE` |
 | `openNodeEmbedDialog` | render page → actionbar menu → `OPTIONS.EMBED` |
@@ -100,15 +106,31 @@ Not covered, with the reason:
 
 | Reason | Dialogs |
 | --- | --- |
-| `OptionItem.scopes` limits them to the search page | `openNodeReportDialog` (also needs config `nodeReport: true`) |
-| Would need endpoints the mock does not have | `openWorkflowDialog` (`…/workflow`), `openNodeStoreDialog`'s "add" action (`…/nodeList/BASKET/{node}`), version management (`…/versions/metadata`), `openNodeTemplateDialog` (`…/metadata/template`), `openLicenseDialog` (needs `TOOLPERMISSION_LICENSE`), feedback dialogs (`/feedback/v1/…`) |
-| Only reachable from another dialog, admin pages or drag&drop | `openShareHistoryDialog`, `openShareLinkDialog` (creates a share on open), `openContributorEditDialog`, `openInputDialog`, `openXmlAppPropertiesDialog`, `openCopyMoveDialog` |
+| Would need endpoints the mock does not have | `openNodeStoreDialog`'s "add" action (`…/nodeList/BASKET/{node}`), version management (`…/versions/metadata`), feedback dialogs (`/feedback/v1/…`), `openRevocationDialog` (needs existing shares) |
+| Only reachable from an admin page or drag&drop | `openShareLinkDialog` (creates a share on open), `openContributorEditDialog`, `openInputDialog`, `openXmlAppPropertiesDialog`, `openNodeInfoDialog` (admin page), `openCopyMoveDialog` (drag&drop only) |
 | External infrastructure or non-deterministic by nature | `openPreviewMediaDialog` (rendering service), `openAddWithConnectorDialog` / `openCreateLtiToolDialog` (popup windows), `openFileUploadProgressDialog` (uploads on open), `openFileChooserDialog` / `openJoinGroupDialog` (live typeahead, embedded browser) |
 
-Share and simple edit are mocked with **content**, the way the metadata editor is: the permission
-list (`mock-backend/src/fixtures/authorities.ts`) holds the owner, an invited user, a group and one
-inherited entry, so the screenshot covers all three authority kinds instead of an empty list. Both
-dialogs need `GET /iam/v1/authorities/{repo}/recent` before they render.
+Share, simple edit, license, workflow and share history are mocked with **content**, the way the
+metadata editor is — an empty dialog proves very little:
+
+* `fixtures/authorities.ts` — the node's permission list holds the owner, an invited user, a group
+  and "everyone", so the share dialog renders every authority kind it knows. The *parent* folder
+  answers with `parentPermissions` (owner only), because the share dialog builds its "inherited"
+  section from the parent, and because the simple-edit invite section blocks itself with
+  `SIMPLE_EDIT.INVITE.ERROR_INHERIT` when the parent is shared with somebody else.
+* `fixtures/node-extras.ts` — share history and workflow history. The three share-history entries
+  are chosen so all three change kinds the dialog can draw appear: added, changed, removed.
+* Simple edit shows all three of its sections with their real controls: the mds group `io_simple`
+  points at a deliberately short two-widget view, `TOOLPERMISSION_LICENSE` plus a CC BY 4.0 license
+  on the node keeps the license section out of its "invalid state" branch, and one mocked
+  organization (`GET /organization/v1/organizations/…` plus its `…/type/…` subgroup) gives the
+  invite toggles something to offer. The recently-invited tiles mix invited and not-yet-invited
+  authorities so both tile states are covered.
+
+Share and simple edit need `GET /iam/v1/authorities/{repo}/recent` before they render.
+
+`OPTIONS.VERSION_MANAGEMENT` looks like a dialog but is not one — it opens the editorial sidebar
+(`EditorialSidebarService.showOption`), so it is out of scope for this spec.
 
 Not every dialog can be captured in full: some have a fixed maximum height and stay scrollable no
 matter how tall the viewport gets (simple edit is one). `expandViewportToFit(…, { assertFits: false })`

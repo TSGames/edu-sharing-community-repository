@@ -1,6 +1,7 @@
 import { paginate, USER_HOME_ID } from '../fixtures/builders';
-import { nodePermissions } from '../fixtures/authorities';
-import { childrenOf, findNode, userHomeFolder } from '../fixtures/nodes';
+import { nodePermissions, parentPermissions } from '../fixtures/authorities';
+import { permissionsHistory, workflowHistory } from '../fixtures/node-extras';
+import { childrenOf, findNode, savedSearches, userHomeFolder } from '../fixtures/nodes';
 import { json, noContent } from '../http';
 import { Node } from '../models';
 import { Router } from '../router';
@@ -12,7 +13,6 @@ const EMPTY_VIRTUAL_FOLDERS = [
     '-to_me_shared_files-',
     '-my_shared_files-',
     '-to_me_shared_files_personal-',
-    '-saved_search-',
     '-workflow_receive-',
 ];
 
@@ -70,15 +70,38 @@ export function registerNodeRoutes(router: Router): void {
         json(res, { nodes: parents, scope: 'MY_FILES' });
     });
 
-    // Populated on purpose - the share dialog renders this list as its "invited" tab.
-    router.get('/node/v1/nodes/:repository/:node/permissions', ({ res }) =>
-        json(res, nodePermissions),
-    );
+    /**
+     * Populated on purpose - the share dialog renders this list as its "invited" tab. Folders
+     * answer with the owner only, see `parentPermissions`.
+     */
+    router.get('/node/v1/nodes/:repository/:node/permissions', ({ res, params }) => {
+        const node = findNode(params.node);
+        json(res, !node || node.isDirectory ? parentPermissions : nodePermissions);
+    });
 
     /** Permissions of a single authority; the share dialog checks the configured receiver. */
     router.get('/node/v1/nodes/:repository/:node/permissions/:authority', ({ res }) =>
         json(res, ['Coordinator']),
     );
+
+    /** Share history - reached from the share dialog through `WORKSPACE.SHARE.SHOW_HISTORY`. */
+    router.get('/node/v1/nodes/:repository/:node/notifys', ({ res }) =>
+        json(res, permissionsHistory),
+    );
+
+    /** Workflow history, rendered below the form of the workflow dialog. */
+    router.get('/node/v1/nodes/:repository/:node/workflow', ({ res }) =>
+        json(res, workflowHistory),
+    );
+
+    /**
+     * Folder template - the metadata every new child of the folder inherits. `enabled: false` is
+     * the state a folder starts in, which is what the dialog's toggle shows.
+     */
+    router.get('/node/v1/nodes/:repository/:node/metadata/template', ({ res, params }) => {
+        const node = findNode(params.node);
+        json(res, { node: node ?? userHomeFolder, enabled: false });
+    });
 
     router.get('/node/v1/nodes/:repository/:node/shares', ({ res }) => json(res, []));
     router.get('/node/v1/nodes/:repository/:node/versions', ({ res }) => json(res, { versions: [] }));

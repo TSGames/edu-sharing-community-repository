@@ -21,6 +21,9 @@ export function userEntry(user: KnownUser): UserEntry {
             quota: { enabled: false },
             editable: true,
             status: { status: 'active', date: 0 },
+            // `RestIamService.getCurrentUserVCard()` reads the author id from here; without it
+            // the simple-edit license section logs a warning on every open.
+            properties: { 'cm:esuid': [`esuid-${user.userName}`] },
         },
     };
 }
@@ -36,6 +39,10 @@ export const toolPermissions: string[] = [
     'TOOLPERMISSION_CREATE_ELEMENTS_FILES',
     // Without it the "relations" entry of the render page's actionbar stays disabled.
     'TOOLPERMISSION_MANAGE_RELATIONS',
+    // Both are checked by the simple-edit dialog: without them the invite section hides its
+    // toggles and the license section replaces itself with an error message.
+    'TOOLPERMISSION_INVITE_ALLAUTHORITIES',
+    'TOOLPERMISSION_LICENSE',
 ];
 
 export const repositories: RepoEntries = {

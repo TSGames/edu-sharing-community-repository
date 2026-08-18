@@ -1,3 +1,4 @@
+import { organizations } from '../fixtures/authorities';
 import { toolPermissions } from '../fixtures/user';
 import { json, noContent } from '../http';
 import { Router } from '../router';
@@ -18,7 +19,10 @@ export function registerMiscRoutes(router: Router): void {
     router.get('/rating/v1/ratings/:repository/:node/history', ({ res }) => json(res, []));
     router.get('/usage/v1/usages/node/:node', ({ res }) => json(res, { usages: [] }));
     router.get('/usage/v1/usages/node/:node/collections', ({ res }) => json(res, []));
-    router.get('/relation/v1/relation/:repository/:node', ({ res }) => json(res, { relations: [] }));
+    // `GET /relation/v1/{repository}/{node}` returns a bare array of `NodeRelationData`, not a
+    // wrapper object - see `api/fn/relation-v-1/get-relations.ts`.
+    router.get('/relation/v1/:repository/:node', ({ res }) => json(res, []));
+    router.get('/relation/v1/:repository/:node/raw', ({ res }) => json(res, []));
     router.get('/comment/v1/comments/:repository/:node', ({ res }) => json(res, { comments: [] }));
 
     router.get('/admin/v1/toolpermissions/:authority', ({ res }) =>
@@ -38,7 +42,7 @@ export function registerMiscRoutes(router: Router): void {
         json(res, { url: null, connectors: [] }),
     );
     router.get('/organization/v1/organizations/:repository', ({ res }) =>
-        json(res, { organizations: [], pagination: { total: 0, from: 0, count: 0 } }),
+        json(res, organizations),
     );
     router.get('/mediacenter/v1/mediacenter/:repository', ({ res }) => json(res, []));
     router.get('/register/v1/exists/:mail', ({ res }) => json(res, { exists: false }));

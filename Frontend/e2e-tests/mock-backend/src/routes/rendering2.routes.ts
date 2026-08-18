@@ -47,6 +47,8 @@ const finishedJob: JobInfoReply = {
 
 export function registerRendering2Routes(router: Router): void {
     router.post('/public/renderdata', ({ res }) => json(res, renderData));
+    // The service worker re-requests the render data with GET when it warms its cache.
+    router.get('/public/renderdata', ({ res }) => json(res, renderData));
     router.post('/public/renderdata/ondemand', ({ res }) => json(res, renderData));
 
     // Only reached when a response carries a `jobId`; kept so a stray call is not a 501.

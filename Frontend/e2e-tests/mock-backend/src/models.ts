@@ -106,6 +106,36 @@ export interface User {
     properties?: { [key: string]: string[] };
 }
 
+/** `GET /node/v1/nodes/{repo}/{node}/notifys` - one entry of the share history. */
+export interface NodePermissionsHistoryEntry {
+    date: number;
+    action: string;
+    user: Authority;
+    permissions: { inherited: boolean; permissions: Ace[] };
+}
+
+/** `GET /node/v1/nodes/{repo}/{node}/workflow` - one entry of the workflow history. */
+export interface WorkflowEntry {
+    time: number;
+    status: string;
+    comment: string;
+    editor: Authority;
+    receiver: Authority[];
+}
+
+export interface Organization {
+    authorityName: string;
+    authorityType?: string;
+    groupName?: string;
+    editable?: boolean;
+    profile?: { displayName?: string; groupType?: string };
+}
+
+export interface OrganizationEntries {
+    organizations: Organization[];
+    pagination: Pagination;
+}
+
 export interface UserEntry {
     person: User;
     editProfile?: boolean;
@@ -367,6 +397,12 @@ export interface Authority {
     authorityType?: string;
     editable?: boolean;
     properties?: { [key: string]: string[] };
+    /**
+     * Only set where a display name is needed without a surrounding `Ace`: the share history and
+     * the workflow history render the authority directly through the `authorityName` pipe, which
+     * falls back to the raw id when neither `profile` nor `group` is present.
+     */
+    profile?: { firstName?: string; lastName?: string; displayName?: string; groupType?: string };
 }
 
 export interface AuthorityEntries {

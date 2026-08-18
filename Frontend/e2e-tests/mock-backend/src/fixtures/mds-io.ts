@@ -193,11 +193,28 @@ export const ioViews: MdsView[] = [
             '<version></version>',
         ].join('\n'),
     },
+    /** Short form, used by the dialogs that embed the editor next to other sections. */
+    {
+        id: 'node_short',
+        caption: 'Allgemein',
+        icon: 'info',
+        html: [
+            '<cclom:title></cclom:title>',
+            '<ccm:educationalcontext></ccm:educationalcontext>',
+        ].join('\n'),
+    },
 ];
 
 export const ioGroups: MdsGroup[] = [
     { id: 'io', rendering: 'angular', views: ['node_general'] },
-    { id: 'io_simple', rendering: 'angular', views: ['node_general'] },
+    // Simple edit is deliberately *not* the full view: the dialog shows a short form above the
+    // invite and license sections, and the real metadata sets keep `io_simple` down to a handful
+    // of widgets. Two are enough to prove the editor is embedded and prefilled.
+    { id: 'io_simple', rendering: 'angular', views: ['node_short'] },
+    // The folder template dialog; without this group its editor never finishes loading.
+    { id: 'io_template', rendering: 'angular', views: ['node_short'] },
+    // The node picker embedded in the relations dialog, in search mode.
+    { id: 'search_relation_node', rendering: 'angular', views: ['search'] },
     // The metadata block below the renderer on the render2 page uses this group in viewer mode.
     { id: 'io_render', rendering: 'angular', views: ['node_general'] },
 ];

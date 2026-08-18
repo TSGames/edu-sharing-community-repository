@@ -21,7 +21,8 @@ const values: Values = {
     workspaceViewType: 0,
     searchSidenavMode: 'never',
     searchGroupResults: false,
-    nodeReport: false,
+    // Gates the "report this material" entry of the search-page context menu.
+    nodeReport: true,
     publishingNotice: false,
     licenseDialogOnUpload: false,
     userAffiliation: false,

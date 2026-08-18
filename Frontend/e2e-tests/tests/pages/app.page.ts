@@ -78,6 +78,20 @@ export class AppPage {
         await this.row(pattern).first().click({ button: 'right' });
     }
 
+    /**
+     * Same, for the search page - it renders its results as cards, not as table rows.
+     *
+     * Scoped to `es-node-entries-card`: the collections carousel above the materials uses
+     * `es-node-entries-card-small` and carries the same titles, so an unscoped card locator would
+     * open the context menu of a collection instead of the material.
+     */
+    async openCardOptionsMenu(pattern: string | RegExp): Promise<void> {
+        await this.page
+            .locator('es-node-entries-card', { hasText: pattern })
+            .first()
+            .click({ button: 'right' });
+    }
+
     /** Opens the overflow menu ("...") of the actionbar, e.g. on the render page. */
     async openActionbarMenu(): Promise<void> {
         await this.page.locator('es-actionbar button').last().click();

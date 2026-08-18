@@ -121,6 +121,15 @@ export function makeFile(options: FileOptions): Node {
             'cm:created': [FIXED_MILLIS],
             'cm:modified': [FIXED_MILLIS],
             'ccm:commonlicense_key': [license],
+            // The simple-edit license section only accepts a Creative Commons license when it is
+            // version 4.0 - anything else counts as "invalid state" and replaces the whole
+            // section with a warning (`SimpleEditLicenseComponent.prepare`).
+            'ccm:commonlicense_cc_version': license.startsWith('CC_') ? ['4.0'] : [],
+            // Shown by the license section once the source is set to "foreign".
+            'ccm:author_freetext': ['Bundeszentrale für politische Bildung'],
+            'ccm:license_title_of_work': [options.title],
+            'ccm:license_source_url': ['https://example.org/quelle'],
+            'ccm:license_profile_url': ['https://example.org/urheber'],
             'ccm:replicationsource': [],
             'cclom:general_description': [`Mock material "${options.title}".`],
             'ccm:educationalcontext': ['sonstiges'],

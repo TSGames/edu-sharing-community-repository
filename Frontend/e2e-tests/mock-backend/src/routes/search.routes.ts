@@ -1,6 +1,6 @@
 import { paginate } from '../fixtures/builders';
 import { collections } from '../fixtures/collections';
-import { files } from '../fixtures/nodes';
+import { files, savedSearches } from '../fixtures/nodes';
 import { json } from '../http';
 import { Facet, Node, SearchResultNode } from '../models';
 import { Ctx, Router } from '../router';
@@ -22,20 +22,23 @@ const facets: Facet[] = [
  * Matching on the title only is enough to make "search for X" scenarios meaningful while keeping
  * results fully predictable.
  */
-function applyCriteria(body: any): Node[] {
+function applyCriteria(body: any, corpus: Node[]): Node[] {
     const criteria: { property?: string; values?: string[] }[] = body?.criteria ?? [];
     const searchWord = criteria
         .find((criterion) => criterion.property === 'ngsearchword')
         ?.values?.[0]?.trim()
         .toLowerCase();
     if (!searchWord) {
-        return files;
+        return corpus;
     }
-    return files.filter((node) => (node.title ?? '').toLowerCase().includes(searchWord));
+    return corpus.filter((node) => (node.title ?? '').toLowerCase().includes(searchWord));
 }
 
-function search({ res, query, body }: Ctx): void {
-    const matches = applyCriteria(body);
+function search({ res, params, query, body }: Ctx): void {
+    // The saved-searches dialog searches the shared saved searches through the same endpoint,
+    // distinguished only by the query id.
+    const corpus = params.query === 'saved_search' ? savedSearches : files;
+    const matches = applyCriteria(body, corpus);
     const { page, pagination } = paginate(matches, query, 10);
     const result: SearchResultNode = { nodes: page, pagination, facets, ignored: [] };
     json(res, result);
