@@ -60,6 +60,9 @@ export const userHomeFolder: Node = makeFolder({
     parent: USER_HOME_ID,
 });
 
+/** `GET /iam/v1/people/{repo}/{person}/nodeList/BASKET` - the bookmarks of the node-store dialog. */
+export const bookmarkedNodes: Node[] = [files[0], files[3], files[5]];
+
 export const allNodes: Node[] = [userHomeFolder, ...folders, ...files];
 
 export function findNode(id: string): Node | undefined {

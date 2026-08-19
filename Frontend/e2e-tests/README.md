@@ -120,6 +120,14 @@ metadata editor is — an empty dialog proves very little:
   `SIMPLE_EDIT.INVITE.ERROR_INHERIT` when the parent is shared with somebody else.
 * `fixtures/node-extras.ts` — share history and workflow history. The three share-history entries
   are chosen so all three change kinds the dialog can draw appear: added, changed, removed.
+* `fixtures/node-extras.ts` also holds the relations of a node (two, of different types, so the
+  relations dialog draws both of its groups) and the dashboard shortcuts (two `default` entries and
+  one `ref` entry, i.e. both entry kinds).
+* `fixtures/nodes.ts` — `bookmarkedNodes` fills `nodeList/BASKET`, so the node-store dialog lists
+  rows instead of `SEARCH.NODE_STORE.LIST_EMPTY`.
+* `fixtures/builders.ts` — every file node carries `ccm:lifecyclecontributer_author` /
+  `_publisher` and `ccm:metadatacontributer_creator` as VCard strings, which is what the
+  contributors dialog and the `vcard` / `author` widgets render.
 * Simple edit shows all three of its sections with their real controls: the mds group `io_simple`
   points at a deliberately short two-widget view, `TOOLPERMISSION_LICENSE` plus a CC BY 4.0 license
   on the node keeps the license section out of its "invalid state" branch, and one mocked
@@ -128,6 +136,11 @@ metadata editor is — an empty dialog proves very little:
   authorities so both tile states are covered.
 
 Share and simple edit need `GET /iam/v1/authorities/{repo}/recent` before they render.
+
+The default entries of the shortcut dialog carry an explicit `title`. Without one,
+`ShortcutEntryTitlePipe` looks the id up below `SHORTCUT_ENTRIES.` and, 500ms later, replaces the
+unresolved key with `[MISSING_TRANSLATION: ...]` — under `locale=none` that is the only thing a
+default entry can render, and the delay would make the baseline depend on timing.
 
 `OPTIONS.VERSION_MANAGEMENT` looks like a dialog but is not one — it opens the editorial sidebar
 (`EditorialSidebarService.showOption`), so it is out of scope for this spec.

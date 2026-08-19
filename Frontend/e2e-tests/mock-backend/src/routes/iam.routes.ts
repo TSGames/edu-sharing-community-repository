@@ -1,4 +1,6 @@
 import { recentAuthorities } from '../fixtures/authorities';
+import { dashboardShortcuts } from '../fixtures/node-extras';
+import { bookmarkedNodes } from '../fixtures/nodes';
 import { userEntry } from '../fixtures/user';
 import { json, noContent } from '../http';
 import { Router } from '../router';
@@ -32,14 +34,23 @@ export function registerIamRoutes(router: Router): void {
         json(res, { groups: [], pagination: { total: 0, from: 0, count: 0 } }),
     );
 
+    /** A bare array - see `api/fn/iam-v-1/get-dashboard-shortcuts.ts`, not a wrapper object. */
     router.get('/iam/v1/people/:repository/:person/dashboard/shortcuts', ({ res }) =>
-        json(res, { shortcuts: [] }),
+        json(res, dashboardShortcuts),
     );
 
-    /** Favourites and other node lists — empty, the flows under test do not depend on them. */
-    router.get('/iam/v1/people/:repository/:person/nodeList/:list', ({ res }) =>
-        json(res, { nodes: [], pagination: { total: 0, from: 0, count: 0 } }),
-    );
+    /**
+     * Node lists. `BASKET` is the bookmark list the node-store dialog shows - populated, so the
+     * dialog renders rows instead of `SEARCH.NODE_STORE.LIST_EMPTY`. The remaining lists stay
+     * empty; no flow under test depends on them.
+     */
+    router.get('/iam/v1/people/:repository/:person/nodeList/:list', ({ res, params }) => {
+        const nodes = params.list === 'BASKET' ? bookmarkedNodes : [];
+        json(res, {
+            nodes,
+            pagination: { total: nodes.length, from: 0, count: nodes.length },
+        });
+    });
 
     router.get('/iam/v1/people/:repository/:person/dataprotection', ({ res }) => json(res, {}));
 

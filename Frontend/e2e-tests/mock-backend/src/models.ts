@@ -123,6 +123,30 @@ export interface WorkflowEntry {
     receiver: Authority[];
 }
 
+/**
+ * `GET /relation/v1/{repo}/{node}` - one relation between two nodes. The endpoint answers with a
+ * bare array of these, see `api/fn/relation-v-1/get-relations.ts`.
+ */
+export interface NodeRelation {
+    type: string;
+    reverseType: string;
+    createdAt: string;
+    createdBy: Authority;
+    fromNode: Node;
+    toNode: Node;
+    isAiGenerated: boolean;
+    evaluation: { [key: string]: unknown };
+    metadata: { [key: string]: unknown };
+}
+
+/** One entry of `GET /iam/v1/people/{repo}/{person}/dashboard/shortcuts` (also a bare array). */
+export interface DashboardShortcutEntry {
+    type: 'default' | 'ref';
+    title?: string;
+    id?: string;
+    node?: Node;
+}
+
 export interface Organization {
     authorityName: string;
     authorityType?: string;

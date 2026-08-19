@@ -1,4 +1,6 @@
 import { organizations } from '../fixtures/authorities';
+import { relationsOf } from '../fixtures/node-extras';
+import { findNode } from '../fixtures/nodes';
 import { toolPermissions } from '../fixtures/user';
 import { json, noContent } from '../http';
 import { Router } from '../router';
@@ -21,7 +23,10 @@ export function registerMiscRoutes(router: Router): void {
     router.get('/usage/v1/usages/node/:node/collections', ({ res }) => json(res, []));
     // `GET /relation/v1/{repository}/{node}` returns a bare array of `NodeRelationData`, not a
     // wrapper object - see `api/fn/relation-v-1/get-relations.ts`.
-    router.get('/relation/v1/:repository/:node', ({ res }) => json(res, []));
+    router.get('/relation/v1/:repository/:node', ({ res, params }) => {
+        const node = findNode(params.node);
+        json(res, node ? relationsOf(node) : []);
+    });
     router.get('/relation/v1/:repository/:node/raw', ({ res }) => json(res, []));
     router.get('/comment/v1/comments/:repository/:node', ({ res }) => json(res, { comments: [] }));
 

@@ -60,6 +60,10 @@ test.describe('dialogs from the user menu', () => {
         await app.clickMenuItem('SEARCH.NODE_STORE.TITLE');
 
         const dialog = await app.expectDialog();
+        // The mocked bookmark list, not `SEARCH.NODE_STORE.LIST_EMPTY`.
+        await expect(dialog.getByText('SEARCH.NODE_STORE.LIST_EMPTY')).toHaveCount(0);
+        await expect(dialog.getByText('Bruchrechnen leicht gemacht')).toBeVisible();
+        await expect(dialog.getByText('Photosynthese im Überblick')).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-node-store.png');
     });
 });
@@ -91,11 +95,16 @@ test.describe('dialogs from the workspace', () => {
         await screenshotDialog(page, dialog, 'dialog-delete-nodes.png');
     });
 
+    /** The contributors come from the node's `ccm:*contributer_*` VCard properties. */
     test('contributors', async ({ app, page }) => {
         await app.openOptionsMenu(AppPage.nodeTitle);
         await app.clickMenuItem('OPTIONS.CONTRIBUTOR');
 
         const dialog = await app.expectDialog();
+        // One lifecycle author, one lifecycle publisher, one metadata creator.
+        await expect(dialog.getByText('Maxi Musterfrau')).toBeVisible();
+        await expect(dialog.getByText('Landesbildungsserver')).toBeVisible();
+        await expect(dialog.getByText('End Toend')).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-contributors.png');
     });
 
@@ -104,6 +113,9 @@ test.describe('dialogs from the workspace', () => {
         await app.clickMenuItem('OPTIONS.ADD_SHORTCUT');
 
         const dialog = await app.expectDialog();
+        // Two `default` entries and one `ref` entry from the mocked dashboard shortcuts.
+        await expect(dialog.getByText('Arbeitsbereich')).toBeVisible();
+        await expect(dialog.getByText('Die Weimarer Republik')).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-shortcut-management.png');
     });
 
@@ -312,11 +324,14 @@ test.describe('dialogs from the render page', () => {
         await screenshotDialog(page, dialog, 'dialog-node-embed.png');
     });
 
+    /** Two mocked relations of different types, so the dialog renders both of its groups. */
     test('node relations', async ({ app, page }) => {
         await app.openActionbarMenu();
         await app.clickMenuItem('OPTIONS.RELATIONS');
 
         const dialog = await app.expectDialog();
+        await expect(dialog.getByText('NODE_RELATIONS.NO_RELATIONS')).toHaveCount(0);
+        await expect(dialog.locator('es-node-row')).toHaveCount(2);
         await screenshotDialog(page, dialog, 'dialog-node-relations.png');
     });
 

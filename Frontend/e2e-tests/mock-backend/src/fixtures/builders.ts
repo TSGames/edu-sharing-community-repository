@@ -130,6 +130,18 @@ export function makeFile(options: FileOptions): Node {
             'ccm:license_title_of_work': [options.title],
             'ccm:license_source_url': ['https://example.org/quelle'],
             'ccm:license_profile_url': ['https://example.org/urheber'],
+            // Contributors, rendered by the contributors dialog and by the `vcard` / `author`
+            // widgets of the metadata editor. VCard lines, exactly as the backend stores them -
+            // `VCard` parses `N:` as `surname;givenname`.
+            'ccm:lifecyclecontributer_author': [
+                'BEGIN:VCARD\nVERSION:3.0\nN:Musterfrau;Maxi\nFN:Maxi Musterfrau\nEMAIL:maxi@example.org\nEND:VCARD',
+            ],
+            'ccm:lifecyclecontributer_publisher': [
+                'BEGIN:VCARD\nVERSION:3.0\nORG:Landesbildungsserver\nFN:Landesbildungsserver\nEND:VCARD',
+            ],
+            'ccm:metadatacontributer_creator': [
+                'BEGIN:VCARD\nVERSION:3.0\nN:Toend;End\nFN:End Toend\nEMAIL:e2e@example.org\nEND:VCARD',
+            ],
             'ccm:replicationsource': [],
             'cclom:general_description': [`Mock material "${options.title}".`],
             'ccm:educationalcontext': ['sonstiges'],
