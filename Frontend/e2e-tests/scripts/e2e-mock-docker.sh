@@ -9,7 +9,7 @@
 #   ./e2e-tests/scripts/e2e-mock-docker.sh                     # run the suite
 #   ./e2e-tests/scripts/e2e-mock-docker.sh --update-snapshots  # (re)record baselines
 #
-# Requires a previous `npm run prebuild && npm run build:mock`.
+# Requires a previous `npm run e2e:mock:prepare`.
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ IMAGE="mcr.microsoft.com/playwright:v1.57.0-noble"
 FRONTEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 if [[ ! -d "${FRONTEND_DIR}/dist-mock" ]]; then
-    echo "dist-mock/ is missing - run 'npm run prebuild && npm run build:mock' first." >&2
+    echo "dist-mock/ is missing - run 'npm run e2e:mock:prepare' first." >&2
     exit 1
 fi
 

@@ -45,7 +45,7 @@
     "mock-backend": "npm run build:mock-backend && node e2e-tests/build/mock-backend/index.js",
     "pree2e:mock": "rm -rf e2e-tests/build && npm run build:mock-backend && tsc -p e2e-tests/tsconfig.json",
     "e2e:mock": "playwright test -c e2e-tests/playwright.config.ts",
-    "e2e:mock:prepare": "npm run build:mock-libs && npm run build:mock && npm run build:mock-backend",
+    "e2e:mock:prepare": "npm run build:mock && npm run build:mock-backend",
     "e2e:mock:update": "npm run pree2e:mock && playwright test -c e2e-tests/playwright.config.ts --update-snapshots",
     "e2e:mock:update:docker": "./e2e-tests/scripts/e2e-mock-docker.sh --update-snapshots",
     "e2e-prepare-edu-sharing": "rm -f playwright/storage/*.json && ts-node --esm tests/scripts/prepare-edu-sharing.mts",
@@ -58,8 +58,7 @@
     "print-licenses": "node licenses.js",
     "storybook": "BROWSER=true ng run angular-edusharing:storybook",
     "build-storybook": "ng run angular-edusharing:build-storybook",
-    "prepare": "cd .. && husky install Frontend/.husky && cd Frontend/src/app/core-module && git config core.hooksPath ../../../.husky || true",
-    "build:mock-libs": "(npm run build:edu-sharing-api & PID1=$!; npm run build:b-api & PID2=$!; npm run build:rendering-service-api & PID3=$!; wait $PID1 || exit 1; wait $PID2 || exit 1; wait $PID3 || exit 1)"
+    "prepare": "cd .. && husky install Frontend/.husky && cd Frontend/src/app/core-module && git config core.hooksPath ../../../.husky || true"
   },
   "private": false,
   "subPackages": [
