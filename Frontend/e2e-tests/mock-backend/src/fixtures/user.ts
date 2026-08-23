@@ -43,6 +43,9 @@ export const toolPermissions: string[] = [
     // toggles and the license section replaces itself with an error message.
     'TOOLPERMISSION_INVITE_ALLAUTHORITIES',
     'TOOLPERMISSION_LICENSE',
+    // Editorial sidebar: gate the "views and usage" panel and the "add collection" entry.
+    'TOOLPERMISSION_SELECTIVE_STATISTICS_NODES',
+    'TOOLPERMISSION_CREATE_ELEMENTS_COLLECTIONS',
 ];
 
 export const repositories: RepoEntries = {

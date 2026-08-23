@@ -2,6 +2,9 @@ import { CollectionReference, Node } from '../models';
 import { FIXED_ISO, MOCK_PERSON, ORIGIN, ref } from './builders';
 import { files } from './nodes';
 
+/** `RestConstants.ROOT` - the virtual parent of all top-level collections. */
+export const COLLECTIONS_ROOT = '-root-';
+
 export const COLLECTION_MATH = '00000000-0000-4000-b000-000000000001';
 export const COLLECTION_SCIENCE = '00000000-0000-4000-b000-000000000002';
 
@@ -15,6 +18,10 @@ function makeCollection(options: {
 }): Node {
     return {
         ref: ref(options.id),
+        // Required: the node picker's collection tree writes `collection.parent.id` to attach the
+        // entry to its (fake) scope node. Without a parent that assignment throws, the enclosing
+        // async initializer rejects and the tree stays on its spinner forever.
+        parent: ref(COLLECTIONS_ROOT),
         name: options.title,
         title: options.title,
         type: 'ccm:map',

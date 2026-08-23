@@ -1,6 +1,6 @@
 import { paginate, USER_HOME_ID } from '../fixtures/builders';
 import { nodePermissions, parentPermissions } from '../fixtures/authorities';
-import { permissionsHistory, workflowHistory } from '../fixtures/node-extras';
+import { permissionsHistory, versionsOf, workflowHistory } from '../fixtures/node-extras';
 import { childrenOf, findNode, savedSearches, userHomeFolder } from '../fixtures/nodes';
 import { json, noContent } from '../http';
 import { Node } from '../models';
@@ -104,7 +104,19 @@ export function registerNodeRoutes(router: Router): void {
     });
 
     router.get('/node/v1/nodes/:repository/:node/shares', ({ res }) => json(res, []));
-    router.get('/node/v1/nodes/:repository/:node/versions', ({ res }) => json(res, { versions: [] }));
+    /**
+     * Version history. `/versions` is the plain list, `/versions/metadata` the one the editorial
+     * sidebar's version management reads - it carries the full `NodeVersion` including comment and
+     * author.
+     */
+    router.get('/node/v1/nodes/:repository/:node/versions', ({ res, params }) => {
+        const node = findNode(params.node);
+        json(res, { versions: node ? versionsOf(node) : [] });
+    });
+    router.get('/node/v1/nodes/:repository/:node/versions/metadata', ({ res, params }) => {
+        const node = findNode(params.node);
+        json(res, { versions: node ? versionsOf(node) : [] });
+    });
     router.get('/node/v1/nodes/:repository/:node/comments', ({ res }) => json(res, { comments: [] }));
     // `NodeStats.total` is dereferenced without a guard by the collection info bar.
     router.get('/node/v1/nodes/:repository/:node/stats', ({ res }) =>

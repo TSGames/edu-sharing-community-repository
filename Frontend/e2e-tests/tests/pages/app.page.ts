@@ -124,6 +124,50 @@ export class AppPage {
         return dialog;
     }
 
+    /**
+     * The editorial sidebar (`es-editorial-sidebar`), shared by workspace, search, collections and
+     * the render page.
+     */
+    get sidebar(): Locator {
+        return this.page.locator('es-editorial-sidebar');
+    }
+
+    /**
+     * Selects a node through its row checkbox.
+     *
+     * Not a plain row click: that navigates / opens the node. The checkbox feeds
+     * `EditorialSidebarService.handleSelection`, which is what populates the sidebar's options.
+     */
+    async selectRow(pattern: string | RegExp): Promise<void> {
+        await this.row(pattern)
+            .first()
+            .locator('input[type="checkbox"], mat-checkbox')
+            .first()
+            .click();
+        await settle(this.page);
+    }
+
+    /**
+     * Opens the editorial sidebar through its edge tab.
+     *
+     * The tab is rendered into a body-level CDK overlay, so it is *not* below
+     * `es-edge-toggle` in the DOM - that host element stays empty by design.
+     */
+    async openSidebar(): Promise<Locator> {
+        await this.page.locator('.edge-toggle.side-end').click();
+        await settle(this.page);
+        return this.sidebar;
+    }
+
+    /** Clicks an entry of the sidebar's option overview. `name` is the option's i18n key. */
+    async clickSidebarOption(name: string): Promise<void> {
+        await this.sidebar
+            .locator('.entry', { hasText: `EDITORIAL.OPTIONS.${name}` })
+            .first()
+            .click();
+        await settle(this.page);
+    }
+
     async searchInTopBar(term: string): Promise<void> {
         const field = this.page.locator('[data-test="top-bar-search-field"]');
         await field.fill(term);

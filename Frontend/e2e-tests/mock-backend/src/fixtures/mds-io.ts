@@ -215,6 +215,8 @@ export const ioGroups: MdsGroup[] = [
     { id: 'io_template', rendering: 'angular', views: ['node_short'] },
     // The node picker embedded in the relations dialog, in search mode.
     { id: 'search_relation_node', rendering: 'angular', views: ['search'] },
+    // The metadata block of the editorial sidebar's preview, rendered in viewer mode.
+    { id: 'preview_sidebar', rendering: 'angular', views: ['node_short'] },
     // The metadata block below the renderer on the render2 page uses this group in viewer mode.
     { id: 'io_render', rendering: 'angular', views: ['node_general'] },
 ];

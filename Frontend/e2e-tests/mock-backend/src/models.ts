@@ -147,6 +147,44 @@ export interface DashboardShortcutEntry {
     node?: Node;
 }
 
+/** One entry of `GET /node/v1/nodes/{repo}/{node}/versions/metadata`. */
+export interface NodeVersion {
+    version: { major: number; minor: number; node: NodeRef };
+    comment: string;
+    modifiedAt: string;
+    modifiedBy: Person;
+    properties?: { [key: string]: string[] };
+}
+
+/** One entry of `GET /usage/v1/usages/node/{nodeId}` (wrapped in `{ usages: [...] }`). */
+export interface Usage {
+    appId: string;
+    /**
+     * The panel only counts usages it can classify as an embedding platform:
+     * `CMS`/`wordpress`, `LMS`/`moodle` or `LMS`/`ilias` (`embeddingPlatform()`), everything else
+     * is filtered out of the list and the counter.
+     */
+    appType?: string;
+    appSubtype?: string;
+    appUser: string;
+    appUserMail: string;
+    courseId: string;
+    courseTitle?: string;
+    nodeId: string;
+    parentNodeId: string;
+    resourceId: string;
+    usageVersion: string;
+    created?: string;
+    usageCounter?: number;
+    distinctPersons?: number;
+}
+
+/** One entry of `POST /statistic/v1/statistics/nodes/range` (a bare array of these). */
+export interface NodeStatisticsEntry {
+    counts: { [action: string]: number };
+    node?: { ref: NodeRef };
+}
+
 export interface Organization {
     authorityName: string;
     authorityType?: string;

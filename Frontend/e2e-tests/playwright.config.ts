@@ -97,17 +97,17 @@ const config = defineConfig<MockOptions>({
         // screen, and one baseline per dialog keeps the run fast.
         {
             name: 'chromium-dark',
-            testIgnore: '**/dialogs.spec.js',
+            testIgnore: ['**/dialogs.spec.js', '**/editorial-sidebar.spec.js'],
             use: { ...desktop, ...dark },
         },
         {
             name: 'mobile',
-            testIgnore: '**/dialogs.spec.js',
+            testIgnore: ['**/dialogs.spec.js', '**/editorial-sidebar.spec.js'],
             use: { ...mobile, ...light },
         },
         {
             name: 'mobile-dark',
-            testIgnore: '**/dialogs.spec.js',
+            testIgnore: ['**/dialogs.spec.js', '**/editorial-sidebar.spec.js'],
             use: { ...mobile, ...dark },
         },
     ],

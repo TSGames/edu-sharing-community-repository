@@ -1,5 +1,6 @@
 import { organizations } from '../fixtures/authorities';
-import { relationsOf } from '../fixtures/node-extras';
+import { nodeStatisticsOf, relationsOf, usagesOf } from '../fixtures/node-extras';
+import { collections } from '../fixtures/collections';
 import { findNode } from '../fixtures/nodes';
 import { toolPermissions } from '../fixtures/user';
 import { json, noContent } from '../http';
@@ -19,8 +20,6 @@ export function registerMiscRoutes(router: Router): void {
     router.put('/notification/v1/notifications/status/:status', ({ res }) => noContent(res));
 
     router.get('/rating/v1/ratings/:repository/:node/history', ({ res }) => json(res, []));
-    router.get('/usage/v1/usages/node/:node', ({ res }) => json(res, { usages: [] }));
-    router.get('/usage/v1/usages/node/:node/collections', ({ res }) => json(res, []));
     // `GET /relation/v1/{repository}/{node}` returns a bare array of `NodeRelationData`, not a
     // wrapper object - see `api/fn/relation-v-1/get-relations.ts`.
     router.get('/relation/v1/:repository/:node', ({ res, params }) => {
@@ -49,6 +48,30 @@ export function registerMiscRoutes(router: Router): void {
     router.get('/organization/v1/organizations/:repository', ({ res }) =>
         json(res, organizations),
     );
+    /**
+     * Usages and statistics - the "views and usage" panel of the editorial sidebar.
+     *
+     * `…/collections` answers with entries carrying the collection under `collection`; the
+     * generated client types it loosely as `Collection[]`, the runtime shape is what counts here.
+     * Only `ACTIVE` entries are rendered.
+     */
+    router.get('/usage/v1/usages/node/:nodeId', ({ res, params }) => {
+        const node = findNode(params.nodeId);
+        json(res, { usages: node ? usagesOf(node) : [] });
+    });
+    router.get('/usage/v1/usages/node/:nodeId/collections', ({ res }) =>
+        json(
+            res,
+            collections.map((collection) => ({ collection, collectionUsageType: 'ACTIVE' })),
+        ),
+    );
+    router.delete('/usage/v1/usages/node/:nodeId/:usageId', ({ res }) => noContent(res));
+
+    /** A bare array of tracking entries - see `api/fn/statistic-v-1/get-by-nodes.ts`. */
+    router.post('/statistic/v1/statistics/nodes/range', ({ res, body }) =>
+        json(res, nodeStatisticsOf(Array.isArray(body) ? body : [])),
+    );
+
     router.get('/mediacenter/v1/mediacenter/:repository', ({ res }) => json(res, []));
     router.get('/register/v1/exists/:mail', ({ res }) => json(res, { exists: false }));
     router.get('/stream/v1/:repository', ({ res }) =>

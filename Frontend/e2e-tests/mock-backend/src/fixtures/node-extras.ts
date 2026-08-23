@@ -1,9 +1,12 @@
-import { FIXED_ISO } from './builders';
+import { FIXED_ISO, MOCK_PERSON, REPOSITORY } from './builders';
 import {
     DashboardShortcutEntry,
     Node,
     NodePermissionsHistoryEntry,
     NodeRelation,
+    NodeStatisticsEntry,
+    NodeVersion,
+    Usage,
     WorkflowEntry,
 } from '../models';
 import { MOCK_USER, OTHER_USER, TEACHER_GROUP } from './authorities';
@@ -127,3 +130,99 @@ export const dashboardShortcuts: DashboardShortcutEntry[] = [
     // element is already among the shortcuts and hides the add/replace affordances.
     { type: 'ref', node: files[4] },
 ];
+
+/**
+ * `GET /node/v1/nodes/{repo}/{node}/versions/metadata` - the version history of the editorial
+ * sidebar's "version management".
+ *
+ * The component reverses the list and lifts the *current* version (the one matching
+ * `cclom:version` on the node) to the top, so the newest entry has to match that property. The
+ * comments use the backend's `COMMENT_*` markers, which the component translates into readable
+ * labels - a plain string would be shown verbatim, so both kinds appear here.
+ */
+export const nodeVersions: NodeVersion[] = [
+    {
+        version: { major: 1, minor: 0, node: { id: '', repo: REPOSITORY, archived: false } },
+        comment: 'MAIN_FILE_UPLOAD',
+        modifiedAt: new Date(FIXED_TIME - 2 * DAY).toISOString(),
+        modifiedBy: MOCK_PERSON,
+    },
+    {
+        version: { major: 1, minor: 1, node: { id: '', repo: REPOSITORY, archived: false } },
+        comment: 'METADATA_UPDATE',
+        modifiedAt: new Date(FIXED_TIME - DAY).toISOString(),
+        modifiedBy: MOCK_PERSON,
+    },
+    {
+        version: { major: 1, minor: 2, node: { id: '', repo: REPOSITORY, archived: false } },
+        comment: 'Lizenz auf CC BY 4.0 gesetzt.',
+        modifiedAt: new Date(FIXED_TIME).toISOString(),
+        modifiedBy: MOCK_PERSON,
+    },
+];
+
+export function versionsOf(node: Node): NodeVersion[] {
+    return nodeVersions.map((version) => ({
+        ...version,
+        version: { ...version.version, node: node.ref },
+    }));
+}
+
+/**
+ * `GET /usage/v1/usages/node/{nodeId}` - where a node is embedded.
+ *
+ * The "views and usage" panel of the editorial sidebar lists these below its metric cards.
+ */
+export function usagesOf(node: Node): Usage[] {
+    return [
+        {
+            appId: 'moodle-mock',
+            appType: 'LMS',
+            appSubtype: 'moodle',
+            appUser: 'maxi',
+            appUserMail: 'maxi@example.org',
+            courseId: 'kurs-4711',
+            courseTitle: 'Naturwissenschaften 7a',
+            nodeId: node.ref.id,
+            parentNodeId: node.parent?.id ?? '',
+            resourceId: 'res-1',
+            usageVersion: '1.0',
+            created: new Date(FIXED_TIME - 3 * DAY).toISOString(),
+            usageCounter: 12,
+            distinctPersons: 8,
+        },
+        {
+            appId: 'wordpress-mock',
+            appType: 'CMS',
+            appSubtype: 'wordpress',
+            appUser: 'e2e',
+            appUserMail: 'e2e@example.org',
+            courseId: 'kurs-0815',
+            courseTitle: 'Geografie 9b',
+            nodeId: node.ref.id,
+            parentNodeId: node.parent?.id ?? '',
+            resourceId: 'res-2',
+            usageVersion: '1.0',
+            created: new Date(FIXED_TIME - DAY).toISOString(),
+            usageCounter: 3,
+            distinctPersons: 3,
+        },
+    ];
+}
+
+/**
+ * `POST /statistic/v1/statistics/nodes/range` - the counters behind the metric cards.
+ *
+ * The panel sums `counts` across the returned entries; the view card adds direct and embedded
+ * views. Fixed numbers, so the rendered figures are part of the baseline.
+ */
+export function nodeStatisticsOf(nodeIds: string[]): NodeStatisticsEntry[] {
+    return nodeIds.map((nodeId) => ({
+        counts: {
+            VIEW_MATERIAL: 128,
+            VIEW_MATERIAL_EMBEDDED: 34,
+            DOWNLOAD_MATERIAL: 17,
+        },
+        node: { ref: { id: nodeId, repo: REPOSITORY, archived: false } },
+    }));
+}

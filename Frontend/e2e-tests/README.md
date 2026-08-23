@@ -158,6 +158,39 @@ Two findings from wiring this up, both in the application, not the tests:
   the CANCEL button: the editor switches to `Closable.Confirm`, and that mode guards only those
   triggers (`card-dialog/card-dialog-ref.ts`).
 
+### Editorial sidebar
+
+`EditorialSidebarComponent` (`src/app/features/editorial-sidebar`) is the same component on every
+page — workspace, search, collections and the render page each mount it with a different
+`primaryMode`, and that decides the option list. Its options are `OptionItem`s, gated exactly like
+the context-menu entries. Covered in `editorial-sidebar.spec.ts`, `chromium` only (below 900px the
+sidebar becomes a full-screen overlay).
+
+| Option | Opened via |
+| --- | --- |
+| option overview, with and without a selection | edge tab at the right screen edge |
+| `PREVIEW` | workspace → select a node → `EDITORIAL.OPTIONS.PREVIEW` |
+| `VERSION_MANAGEMENT` | same, `…VERSION_MANAGEMENT` — this is where `OPTIONS.VERSION_MANAGEMENT` of the node context menu leads |
+| `VIEWS_AND_USAGE` | same, `…VIEWS_AND_USAGE` |
+| `MANAGE_CONTENT` | same, `…MANAGE_CONTENT` |
+| `SORT_INTO` | workspace **inside a folder** → `…SORT_INTO` (its `customShowCallback` needs a folder or map parent, so it never appears in the workspace root) |
+| `ADD_COLLECTION` | collections page → `…ADD_COLLECTION` |
+
+Not covered: `MANAGE_SUBMISSION` and `VIEW_ASSIGNMENT` (editorial page with assignments — a page
+type of its own) and `SHARE_QR` (`scopes: ['activity']`, likewise editorial page only; the QR dialog
+itself is covered through the render page).
+
+Three things the sidebar needs from the mock that are easy to miss:
+
+* the edge tab is rendered into a **body-level CDK overlay**, so it is not below `es-edge-toggle`
+  in the DOM — that host element stays empty by design. `AppPage.openSidebar()` clicks
+  `.edge-toggle.side-end`.
+* the option list only fills once nodes are selected through the list's **checkbox**; a plain row
+  click navigates instead of selecting (`AppPage.selectRow`).
+* the node picker's collection tree writes `collection.parent.id`, so every mocked collection needs
+  a `parent`. Without it the assignment throws, the enclosing async initializer rejects, and the
+  tree stays on its spinner forever — with no failing request to point at it.
+
 ## Screenshots
 
 Baselines live in `e2e-tests/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.
