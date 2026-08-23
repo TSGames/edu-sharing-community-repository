@@ -20,6 +20,8 @@ export interface MockFixtures {
     consoleErrors: string[];
     /** Page helper, pre-configured with the project's theme. */
     app: AppPage;
+    /** Auto fixture: seeds language and theme before the first paint. */
+    browserState: void;
 }
 
 export interface MockOptions {
@@ -45,6 +47,41 @@ export const test = base.extend<MockOptions & MockFixtures>({
         await use(new AppPage(page, theme));
     },
 
+    /**
+     * Seeds everything that has to be in place *before the first paint*, for every test.
+     *
+     * The theme in particular cannot be left to the `?theme=` query parameter: that parameter is
+     * presentation-only and explicitly not persisted (`ThemeService.registerDarkMode`), so it is
+     * lost on the first client-side navigation - after the post-login redirect, or when a folder
+     * is opened. Two of the ten dark baselines were light because of exactly that.
+     * `AccessibilityService` stores the setting under `accessibility_darkMode` in localStorage
+     * (`Store.LocalStorage`, JSON-encoded), which survives every navigation.
+     */
+    browserState: [
+        async ({ page, theme }, use) => {
+            await page.addInitScript(
+                ({ locale, darkMode }) => {
+                    let seed = 42;
+                    Math.random = () => {
+                        seed = (seed * 1664525 + 1013904223) % 4294967296;
+                        return seed / 4294967296;
+                    };
+                    window.localStorage.setItem('TUTORIAL.USER_TUTORIAL_HEADING', 'true');
+                    window.localStorage.setItem('TUTORIAL.SEARCH.TUTORIAL_HEADING', 'true');
+                    // The language from the very first paint. The `locale=` query parameter alone
+                    // is applied only after the first render, so a cold load would briefly show
+                    // the default language - and that race made screenshots differ between runs.
+                    // `SessionStorageService` reads this key from localStorage for guests.
+                    window.localStorage.setItem('language', JSON.stringify(locale));
+                    window.localStorage.setItem('accessibility_darkMode', JSON.stringify(darkMode));
+                },
+                { locale: LOCALE, darkMode: theme },
+            );
+            await use();
+        },
+        { auto: true },
+    ],
+
     consoleErrors: async ({ page }, use) => {
         const errors: string[] = [];
         const unmocked: string[] = [];
@@ -69,20 +106,9 @@ export const test = base.extend<MockOptions & MockFixtures>({
         // it measures elapsed time via `Date.now()` differences, so a frozen clock leaves the
         // loading screen up forever. Determinism of dates comes from the fixed timestamps in the
         // mock fixtures instead; anything that renders a *relative* date must be masked.
-        await page.addInitScript(() => {
-            let seed = 42;
-            Math.random = () => {
-                seed = (seed * 1664525 + 1013904223) % 4294967296;
-                return seed / 4294967296;
-            };
-            window.localStorage.setItem('TUTORIAL.USER_TUTORIAL_HEADING', 'true');
-            window.localStorage.setItem('TUTORIAL.SEARCH.TUTORIAL_HEADING', 'true');
-            // Language "none" from the very first paint. The `locale=none` query parameter alone
-            // is applied only after the first render, so a cold load would briefly show the
-            // default language - and that race made screenshots differ between runs.
-            // `SessionStorageService` reads this key from localStorage for guests.
-            window.localStorage.setItem('language', JSON.stringify('none'));
-        });
+        //
+        // Language and theme are seeded by the `browserState` fixture above.
+
         // Nothing outside the mock may influence the rendering.
         await page.route('**', async (route) => {
             const host = new URL(route.request().url()).hostname;

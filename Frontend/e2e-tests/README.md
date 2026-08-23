@@ -271,6 +271,14 @@ The language is the pipeline variable `E2E_MOCK_LOCALE` — offered as a dropdow
 `it`, `none`) in the "Run pipeline" form, default `de`. The `e2e mock` job pins it to `none` in its
 own `variables:` so it never inherits a language from there.
 
+Language *and* theme are seeded into `localStorage` before the first paint (`browserState`, an
+auto fixture). For the theme that is not an optimisation but a correctness fix: `?theme=` is
+presentation-only and explicitly not persisted (`ThemeService.registerDarkMode`), so it is lost on
+the first client-side navigation - after the post-login redirect, or when a folder is opened. Two of
+the ten dark baselines were silently light because of that. `AccessibilityService` stores the
+setting under `accessibility_darkMode` (JSON-encoded, `Store.LocalStorage`), which survives every
+navigation.
+
 One consequence for new scenarios: **assert through markup, not through labels.** Every assertion
 that matched an i18n key had to be rewritten (`data-test`, component selectors, fixture data such
 as names and comments), because those keys turn into German in the capture run. The sidebar options
