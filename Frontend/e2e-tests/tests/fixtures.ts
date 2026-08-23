@@ -1,5 +1,6 @@
 import { expect, Locator, Page, test as base } from '@playwright/test';
 import * as fs from 'fs';
+import * as path from 'path';
 import { AppPage } from './pages/app.page';
 
 /** Requests that are allowed to fail without failing the test. */
@@ -206,7 +207,21 @@ export async function expandViewportToFit(
 }
 
 /**
- * Compares a screenshot against the committed baseline.
+ * Language the application is rendered in. `none` makes it print the raw i18n keys, which is what
+ * the committed baselines use; a real language is for the capture run (see `CAPTURE_DIR`).
+ */
+export const LOCALE = process.env.E2E_MOCK_LOCALE || 'none';
+
+/**
+ * When set, screenshots are **written** to this directory instead of being compared against the
+ * committed baselines. That is the "produce documentation screenshots" mode: it is the only way to
+ * run with a real language, because the baselines are recorded with `locale=none` and every
+ * translated label would differ.
+ */
+const CAPTURE_DIR = process.env.E2E_MOCK_CAPTURE_DIR || '';
+
+/**
+ * Compares a screenshot against the committed baseline - or, in capture mode, writes it out.
  *
  * When no baseline exists yet the comparison is skipped with a warning instead of failing, so a
  * new scenario can be merged before its baseline is generated (see `e2e-tests/README.md`).
@@ -222,6 +237,15 @@ export async function expectScreenshot(
     // shows up as a 4px strip at the top of the content area on mobile.
     const mask = [...(options.mask ?? []), page.locator(PROGRESS_BAR)];
     const info = test.info();
+    if (CAPTURE_DIR) {
+        // Grouped by project, so the light/dark and desktop/mobile variants of one screen sit next
+        // to each other. `mask` is kept: the animated progress bar would differ between runs here
+        // as well, and a documentation screenshot should not show a random 4px strip.
+        const file = path.join(CAPTURE_DIR, info.project.name, name);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        await target.screenshot({ ...options, mask, path: file });
+        return;
+    }
     const updateMode = info.config.updateSnapshots;
     const baseline = info.snapshotPath(name);
     if (updateMode === 'none' || updateMode === 'missing') {

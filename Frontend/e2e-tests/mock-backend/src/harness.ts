@@ -15,7 +15,10 @@ import { html } from './http';
  * for the repository API; pointing it at the mock is what gives it the client config (needed for
  * the GDPR consent overlay) and the translations.
  */
-export function renderHarness(res: ServerResponse, moduleKey: string): void {
+export function renderHarness(res: ServerResponse, moduleKey: string, locale: string): void {
+    // `locale` is not used to build the page: `TranslationsService` reads it straight off the
+    // page's own query string, exactly like the application does, and `none` leaves the raw i18n
+    // keys in place. It is only echoed into the title so a captured screenshot names its language.
     const harnessCase = harnessCases[moduleKey];
     if (!harnessCase) {
         html(
@@ -34,7 +37,7 @@ export function renderHarness(res: ServerResponse, moduleKey: string): void {
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>RS2 harness - ${escapeHtml(moduleKey)}</title>
+<title>RS2 harness - ${escapeHtml(moduleKey)} (${escapeHtml(locale)})</title>
 <!-- The component's own stylesheet, including the icon font - without it the material icon
      ligatures render as their raw text ("settings", "fullscreen"). -->
 <link rel="stylesheet" href="/web-component/styles.css">

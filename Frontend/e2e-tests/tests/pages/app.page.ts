@@ -1,5 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
-import { settle } from '../fixtures';
+import { LOCALE, settle } from '../fixtures';
 
 /**
  * Thin page helpers for the mock suite.
@@ -25,16 +25,23 @@ export class AppPage {
     ) {}
 
     /**
-     * Opens a page with `locale=none` and the project's theme.
+     * Opens a page with the suite's locale and the project's theme.
      *
-     * With `locale=none` the application renders the raw i18n keys, which makes the baselines
-     * independent of the configured default language and of translation changes - only layout and
-     * data show up in a diff. `theme` overrides the stored dark-mode preference for this page view
-     * only (`ThemeService.registerDarkMode`).
+     * The default `locale=none` makes the application render the raw i18n keys, which is what
+     * keeps the committed baselines independent of the configured default language and of
+     * translation changes - only layout and data show up in a diff.
+     *
+     * `E2E_MOCK_LOCALE` overrides it with a real language (`de`, `en`, ...). That is meant for the
+     * capture run, which produces readable screenshots for the UX and documentation teams rather
+     * than baselines; a run with a real locale must not be compared against the committed
+     * baselines, which `E2E_MOCK_CAPTURE_DIR` takes care of (see `expectScreenshot`).
+     *
+     * `theme` overrides the stored dark-mode preference for this page view only
+     * (`ThemeService.registerDarkMode`).
      */
     async goto(url: string): Promise<void> {
         const separator = url.includes('?') ? '&' : '?';
-        await this.page.goto(`${url}${separator}locale=none&theme=${this.theme}`);
+        await this.page.goto(`${url}${separator}locale=${LOCALE}&theme=${this.theme}`);
         await settle(this.page);
     }
 
@@ -159,12 +166,18 @@ export class AppPage {
         return this.sidebar;
     }
 
-    /** Clicks an entry of the sidebar's option overview. `name` is the option's i18n key. */
+    /**
+     * An entry of the sidebar's option overview. `name` is the option's short id (`PREVIEW`, ...).
+     *
+     * Addressed through `data-test`, not through its label - the capture run renders the same page
+     * in a real language.
+     */
+    sidebarOption(name: string): Locator {
+        return this.sidebar.locator(`[data-test="sidebar-option-EDITORIAL.OPTIONS.${name}"]`);
+    }
+
     async clickSidebarOption(name: string): Promise<void> {
-        await this.sidebar
-            .locator('.entry', { hasText: `EDITORIAL.OPTIONS.${name}` })
-            .first()
-            .click();
+        await this.sidebarOption(name).first().click();
         await settle(this.page);
     }
 

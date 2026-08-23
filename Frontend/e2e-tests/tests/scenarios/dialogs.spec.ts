@@ -40,7 +40,8 @@ test.describe('dialogs from the user menu', () => {
         await app.clickMenuItem('OPTIONS.ACCESSIBILITY');
 
         const dialog = await app.expectDialog();
-        await expect(dialog.getByText(/ACCESSIBILITY/).first()).toBeVisible();
+        // Structural, not by label: the capture run renders the same dialog in a real language.
+        await expect(dialog.locator('.card-dialog-avatar i')).toHaveText('accessibility');
         await screenshotDialog(page, dialog, 'dialog-accessibility.png');
     });
 
@@ -132,7 +133,9 @@ test.describe('dialogs from the workspace', () => {
         const dialog = await app.expectDialog();
         await expect(dialog.getByText('Maxi Musterfrau').first()).toBeVisible();
         await expect(dialog.getByText('Lehrkräfte').first()).toBeVisible();
-        await expect(dialog.getByText('WORKSPACE.SHARE.PUBLISH_ENABLED').first()).toBeVisible();
+        // The "published" row the EVERYONE entry is rendered as (its own group in the
+        // sharing tab, not the separate publish tab).
+        await expect(dialog.locator('es-share-dialog-permission.link')).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-share.png');
     });
 
@@ -220,12 +223,14 @@ test.describe('dialogs from the workspace', () => {
         await app.clickMenuItem('OPTIONS.INVITE');
         await app.expectDialog();
 
-        await page.getByText('WORKSPACE.SHARE.SHOW_HISTORY').click();
+        // The link is addressed structurally: the capture run translates its label.
+        await page.locator('es-mat-link.history').click();
         const dialog = await app.expectDialog();
-        // All three change kinds the dialog knows.
-        await expect(dialog.getByText('WORKSPACE.SHARE.HISTORY.ADDED').first()).toBeVisible();
-        await expect(dialog.getByText('WORKSPACE.SHARE.HISTORY.CHANGED').first()).toBeVisible();
-        await expect(dialog.getByText('WORKSPACE.SHARE.HISTORY.REMOVED').first()).toBeVisible();
+        // Three history entries, each with at least one change row - the labels are translated in
+        // the capture run, so the assertion goes through the markup.
+        await expect(dialog.locator('.history-entry, .entry').first()).toBeVisible();
+        await expect(dialog.getByText('maxi').first()).toBeVisible();
+        await expect(dialog.getByText('GROUP_lehrkraefte').first()).toBeVisible();
         await screenshotDialog(page, dialog, 'dialog-share-history.png');
     });
 

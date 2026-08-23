@@ -190,7 +190,11 @@ export function createServer(): http.Server {
          * that mounts it for one module (`/rs2-harness?module=video`).
          */
         if (pathname === '/rs2-harness') {
-            renderHarness(res, url.searchParams.get('module') ?? '');
+            renderHarness(
+                res,
+                url.searchParams.get('module') ?? '',
+                url.searchParams.get('locale') ?? 'none',
+            );
             return;
         }
         if (pathname.startsWith('/web-component/')) {
@@ -203,6 +207,21 @@ export function createServer(): http.Server {
                 return;
             }
             text(res, `Not found: ${pathname}. Run \`npm run build:mock-web-component\`.`, 404);
+            return;
+        }
+        /**
+         * Translations for the harness page. `TranslationsService` fetches
+         * `assets/i18n/<scope>/<lang>.json` relative to the page root, and the web component's own
+         * build does not carry them - the application build does. Serving them here is what lets
+         * the harness honour `?locale=de` exactly like the application.
+         */
+        if (pathname.startsWith('/assets/i18n/')) {
+            const file = resolveFile(config.distDir, pathname.slice('/'.length));
+            if (file) {
+                sendFile(res, file);
+                return;
+            }
+            json(res, {});
             return;
         }
         /**

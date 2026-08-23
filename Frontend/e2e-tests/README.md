@@ -247,6 +247,35 @@ Why these and not the others:
 Translations are not loaded in the harness, so labels are raw i18n keys — the same property the
 application baselines get from `locale=none`, and for the same reason.
 
+## Screenshots for the UX and documentation teams
+
+The committed baselines are recorded with `locale=none`, i.e. with the raw i18n keys — that is what
+keeps them independent of the wording and of the configured default language. They are therefore
+useless as documentation material.
+
+For that there is a second mode. `E2E_MOCK_CAPTURE_DIR` makes `expectScreenshot` **write** the
+screenshot instead of comparing it, and `E2E_MOCK_LOCALE` renders the application in a real
+language:
+
+```bash
+E2E_MOCK_LOCALE=de npm run e2e:mock:capture   # → e2e-tests/screenshots/<project>/<name>.png
+```
+
+Both are needed together: a translated label differs from every committed baseline by definition,
+so a comparison in that mode would be meaningless.
+
+In GitLab CI the same thing is the **manual** job `screenshots mock`. It is not a gate but an
+export, so it is `when: manual`, `allow_failure: true` (a failing scenario must not cost the
+screenshots already taken) and publishes `e2e-tests/screenshots/` as an artifact for four weeks.
+The language is the pipeline variable `E2E_MOCK_LOCALE` — offered as a dropdown (`de`, `en`, `fr`,
+`it`, `none`) in the "Run pipeline" form, default `de`. The `e2e mock` job pins it to `none` in its
+own `variables:` so it never inherits a language from there.
+
+One consequence for new scenarios: **assert through markup, not through labels.** Every assertion
+that matched an i18n key had to be rewritten (`data-test`, component selectors, fixture data such
+as names and comments), because those keys turn into German in the capture run. The sidebar options
+gained a `data-test="sidebar-option-<name>"` hook for exactly that reason.
+
 ## Screenshots
 
 Baselines live in `e2e-tests/__screenshots__/<project>/<spec>/<name>.png` and **are committed**.

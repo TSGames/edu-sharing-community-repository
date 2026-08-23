@@ -1,4 +1,4 @@
-import { expect, expectScreenshot, settle, test } from '../fixtures';
+import { expect, expectScreenshot, LOCALE, settle, test } from '../fixtures';
 
 /**
  * The renderer modules of **rendering service 2**, each on its own.
@@ -24,7 +24,10 @@ import { expect, expectScreenshot, settle, test } from '../fixtures';
 const FRAME = '.frame';
 
 async function gotoModule(page: any, module: string): Promise<void> {
-    await page.goto(`/rs2-harness?module=${module}`);
+    // The harness honours `locale` like the application: `TranslationsService` reads it off the
+    // query string. With the default `none` the component prints raw i18n keys, which is what the
+    // committed baselines expect; the capture run passes a real language instead.
+    await page.goto(`/rs2-harness?module=${module}&locale=${LOCALE}`);
     await expect(page.locator(`.module-${moduleClass(module)}`)).toBeVisible();
     await settle(page);
 }
@@ -68,7 +71,7 @@ test.describe('rendering service 2 modules', () => {
     /** The error module renders the generic heading plus `publicErrorMessage`. */
     test('error', async ({ page }) => {
         await gotoModule(page, 'error');
-        await expect(page.getByText('RENDERING.ERROR.GENERIC_ERROR_MESSAGE')).toBeVisible();
+        await expect(page.locator('rs-module-error .rs-error-message h3')).toBeVisible();
         await expectScreenshot(page.locator(FRAME), 'rs2-error.png');
     });
 
@@ -99,10 +102,10 @@ test.describe('rendering service 2 url embeddings', () => {
     ] as const) {
         test(`${name} shows the consent overlay`, async ({ page }) => {
             await gotoModule(page, module);
-            // `getByText` matches substrings, and `…EXTERNAL_CONTENT_INFO` contains the heading
-            // key - hence `first()`.
-            await expect(page.getByText('RENDERING.GDPR.EXTERNAL_CONTENT').first()).toBeVisible();
-            await expect(page.getByText('RENDERING.GDPR.AGREE_AND_CONTINUE')).toBeVisible();
+            // Asserted through the markup rather than the label: the capture run renders the
+            // same page in a real language.
+            await expect(page.locator('rs-module-url .gdpr-content h3')).toBeVisible();
+            await expect(page.locator('rs-module-url .gdpr-content button')).toBeVisible();
             // No iframe before consent.
             await expect(page.locator('rs-module-url iframe')).toHaveCount(0);
             await expectScreenshot(page.locator(FRAME), `rs2-${module}.png`);
@@ -113,7 +116,7 @@ test.describe('rendering service 2 url embeddings', () => {
     test('link', async ({ page }) => {
         await gotoModule(page, 'url-link');
         await expect(page.locator('rs-module-url .link-wrapper img')).toBeVisible();
-        await expect(page.getByText('SHARING.LINK')).toBeVisible();
+        await expect(page.locator('rs-module-url .link-wrapper a')).toBeVisible();
         await expectScreenshot(page.locator(FRAME), 'rs2-url-link.png');
     });
 

@@ -38,12 +38,8 @@ test.describe('editorial sidebar in the workspace', () => {
     test('lists only the folder options without a selection', async ({ app, page }) => {
         await app.openSidebar();
 
-        await expect(
-            app.sidebar.locator('.entry', { hasText: 'EDITORIAL.OPTIONS.SORT_INTO' }),
-        ).toHaveCount(1);
-        await expect(
-            app.sidebar.locator('.entry', { hasText: 'EDITORIAL.OPTIONS.PREVIEW' }),
-        ).toHaveCount(0);
+        await expect(app.sidebarOption('SORT_INTO')).toHaveCount(1);
+        await expect(app.sidebarOption('PREVIEW')).toHaveCount(0);
         await screenshotSidebar(page, 'sidebar-options-no-selection.png');
     });
 
@@ -58,9 +54,7 @@ test.describe('editorial sidebar in the workspace', () => {
             'VERSION_MANAGEMENT',
             'VIEWS_AND_USAGE',
         ]) {
-            await expect(
-                app.sidebar.locator('.entry', { hasText: `EDITORIAL.OPTIONS.${option}` }),
-            ).toHaveCount(1);
+            await expect(app.sidebarOption(option)).toHaveCount(1);
         }
         await screenshotSidebar(page, 'sidebar-options.png');
     });

@@ -8,6 +8,18 @@ variables:
   MAVEN_CLI: "-Ddocker.registry=$DOCKER_REGISTRY -Dhelm.deploy.url=$HELM_REGISTRY -Dhelm.deploy.type=$HELM_TYPE -Dmaven.deploy.releases=$MAVEN_DEPLOY_RELEASES -Dmaven.deploy.snapshots=$MAVEN_DEPLOY_SNAPSHOTS -Dversioning.configFile=maven-git-versioning-extension-ci.xml --batch-mode --errors --fail-fast --show-version"
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
   GIT_SUBMODULE_STRATEGY: recursive
+  # Language of the manual "screenshots mock" job (see below). Offered as a dropdown in the
+  # "Run pipeline" form; can also be set when starting the manual job itself.
+  E2E_MOCK_LOCALE:
+    value: "de"
+    options:
+      - "de"
+      - "en"
+      - "fr"
+      - "it"
+      - "none"
+    description: "Language of the screenshots produced by the manual job \"screenshots mock\". \"none\" renders the raw i18n keys."
+
 
 default:
   #image: maven:3.8.4-eclipse-temurin-17
@@ -174,6 +186,9 @@ e2e mock:
     # A scenario without a committed baseline fails the build instead of silently skipping the
     # visual comparison.
     E2E_MOCK_REQUIRE_BASELINES: "1"
+    # Pinned: the baselines are recorded with `locale=none` (raw i18n keys), so this job must not
+    # inherit the pipeline-level language of the manual "screenshots mock" job.
+    E2E_MOCK_LOCALE: "none"
   before_script:
     - cd Frontend
     - node -v
@@ -337,3 +352,38 @@ check-helmreadme:
     - diff /tmp/README_service.md /tmp/service/README.md             || (echo "README was not generated before committing." && exit 1)
     - diff /tmp/README_transform-aio.md /tmp/transform-aio/README.md || (echo "README was not generated before committing." && exit 1)
     - diff /tmp/README_transform-es.md /tmp/transform-es/README.md   || (echo "README was not generated before committing." && exit 1)
+
+# Produces readable screenshots of every scenario for the UX and documentation teams.
+#
+# Manual on purpose: it is not a gate, it is an export. It renders the same scenarios as `e2e mock`
+# but in a real language (`E2E_MOCK_LOCALE`, default German) and *writes* the screenshots instead of
+# comparing them - a translated label differs from every committed baseline by definition, so a
+# comparison would be meaningless here.
+screenshots mock:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.57.0-noble
+  needs: ["build frontend mock"]
+  when: manual
+  # A failing scenario must not cost the screenshots that were already taken.
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_BRANCH !~ /^maven\/release\/.*/ && $CI_COMMIT_TAG == null
+  cache:
+    key:
+      files:
+        - Frontend/package-lock.json
+      prefix: node-modules-playwright-1.57.0
+    paths:
+      - Frontend/node_modules
+  before_script:
+    - cd Frontend
+    - ([[ -d node_modules ]] || npm ci)
+  script:
+    - npm run e2e:mock:capture
+  artifacts:
+    when: always
+    expire_in: 4 weeks
+    name: "screenshots-$E2E_MOCK_LOCALE-$CI_COMMIT_SHORT_SHA"
+    paths:
+      # One folder per project: chromium / chromium-dark / mobile / mobile-dark.
+      - Frontend/e2e-tests/screenshots/
