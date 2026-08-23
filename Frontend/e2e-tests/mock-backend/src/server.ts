@@ -3,6 +3,7 @@ import * as http from 'http';
 import * as path from 'path';
 import { config, RENDERING2_PREFIX, REST_PREFIX } from './config';
 import { json, readBody, text } from './http';
+import { renderHarness } from './harness';
 import { createApiRouter, createRendering2Router } from './routes';
 import { getSession } from './session';
 
@@ -23,6 +24,9 @@ const MIME_TYPES: { [extension: string]: string } = {
     '.eot': 'application/vnd.ms-fontobject',
     '.map': 'application/json;charset=UTF-8',
     '.txt': 'text/plain;charset=UTF-8',
+    '.wav': 'audio/wav',
+    '.mp4': 'video/mp4',
+    '.pdf': 'application/pdf',
 };
 
 const unmockedRequests = new Set<string>();
@@ -143,9 +147,17 @@ export function createServer(): http.Server {
         // `/edu-sharing`. A non-production build sends its requests to this dev proxy path.
         if (pathname.startsWith(RENDERING2_PREFIX)) {
             const rsPath = pathname.slice(RENDERING2_PREFIX.length).replace(/\/+$/, '') || '/';
-            // The rendered asset itself; the link the mock hands out points here.
+            /**
+             * The rendered asset itself; the link the mock hands out points here. Which file is
+             * served follows the `id` of the link, so the video and audio modules get real media
+             * (a player with a broken source renders differently from one with a working one).
+             */
             if (rsPath.startsWith('/public/asset')) {
-                if (serveAsset(res, '/edu-sharing/preview/preview-1.png')) {
+                const assetId = url.searchParams.get('id') ?? '';
+                const asset = assetId.startsWith('video') || assetId.startsWith('audio')
+                    ? '/edu-sharing/mock-media/sample.wav'
+                    : '/edu-sharing/preview/preview-1.png';
+                if (serveAsset(res, asset)) {
                     return;
                 }
             }
@@ -173,10 +185,54 @@ export function createServer(): http.Server {
             return;
         }
 
-        // 3. static mock assets
+        /**
+         * 3. the standalone rendering-service harness: the built web component plus a host page
+         * that mounts it for one module (`/rs2-harness?module=video`).
+         */
+        if (pathname === '/rs2-harness') {
+            renderHarness(res, url.searchParams.get('module') ?? '');
+            return;
+        }
+        if (pathname.startsWith('/web-component/')) {
+            const file = resolveFile(
+                config.webComponentDir,
+                pathname.slice('/web-component/'.length),
+            );
+            if (file) {
+                sendFile(res, file);
+                return;
+            }
+            text(res, `Not found: ${pathname}. Run \`npm run build:mock-web-component\`.`, 404);
+            return;
+        }
+        /**
+         * Root-relative assets of the harness page. The renderer modules use a few of these
+         * (`assets/img/audio.svg` as the poster of the audio player), and at least that one does
+         * not exist in the repository at all - so unknown files fall back to the placeholder
+         * instead of a 404 that would show up as a broken image in every baseline.
+         */
+        if (pathname.startsWith('/assets/')) {
+            const file = resolveFile(
+                config.webComponentDir,
+                pathname.slice('/'.length),
+            );
+            if (file) {
+                sendFile(res, file);
+                return;
+            }
+            if (serveAsset(res, `/edu-sharing${pathname}`)) {
+                return;
+            }
+        }
+
+        // 4. static mock assets
         if (
             pathname.startsWith('/edu-sharing/themes/') ||
             pathname.startsWith('/edu-sharing/preview/') ||
+            // Deliberately not `/edu-sharing/media/`: that is where the Angular build puts its
+            // own hashed assets (the icon font among them), and shadowing it makes every icon in
+            // every baseline render as its raw ligature text.
+            pathname.startsWith('/edu-sharing/mock-media/') ||
             pathname.startsWith('/edu-sharing/ccimages/')
         ) {
             if (serveAsset(res, pathname)) {
@@ -189,7 +245,7 @@ export function createServer(): http.Server {
             return;
         }
 
-        // 4. built Angular application
+        // 5. built Angular application
         if (pathname === '/' || pathname === '/edu-sharing') {
             res.writeHead(302, { Location: '/edu-sharing/' });
             res.end();

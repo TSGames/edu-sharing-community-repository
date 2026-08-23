@@ -1,3 +1,5 @@
+import { ServerResponse } from 'http';
+import { DDB_JOB_ID, harnessCases } from '../fixtures/rs2-modules';
 import { json, noContent } from '../http';
 import { RenderDataResponse, JobInfoReply } from '../models';
 import { Router } from '../router';
@@ -45,14 +47,72 @@ const finishedJob: JobInfoReply = {
     ],
 };
 
+/**
+ * Answers `renderdata` for the standalone harness: the requested node id selects the case, so the
+ * harness needs no extra plumbing. `415` is a real answer here, not a gap - it is how the backend
+ * says "no module for this media type" and how `RenderComponent` is sent to its frontend-module
+ * fallback (`ModuleInfoService`).
+ */
+function harnessRenderData(res: ServerResponse, nodeId: string | undefined): boolean {
+    const harnessCase = Object.values(harnessCases).find((entry) => entry.node.ref.id === nodeId);
+    if (!harnessCase) {
+        return false;
+    }
+    if (harnessCase.render === 415) {
+        json(res, { error: 'UnsupportedMediaType', userMessage: 'NO_MODULE' }, 415);
+    } else {
+        json(res, harnessCase.render);
+    }
+    return true;
+}
+
+/**
+ * The DDB job. `DdbComponent` picks the size closest to its container from the `size_*` entries and
+ * substitutes the placeholders in `linkTemplate`; the result must be a link the mock can serve.
+ */
+const ddbJob: JobInfoReply = {
+    status: 'FINISHED',
+    module: 'DDB',
+    jobs: [
+        {
+            quality: 1,
+            progress: 100,
+            status: 'FINISHED',
+            objectLink: { width: 800, height: 600, link: 'http://rs2.mock/public/asset?id=ddb' },
+            additionalData: {
+                size_small: '400,300',
+                size_large: '800,600',
+                widthPlaceHolder: '{width}',
+                heightPlaceHolder: '{height}',
+                linkTemplate:
+                    'http://127.0.0.1:4200/edu-sharing/preview/preview-3.png?w={width}&h={height}',
+            },
+        },
+    ],
+};
+
 export function registerRendering2Routes(router: Router): void {
-    router.post('/public/renderdata', ({ res }) => json(res, renderData));
+    router.post('/public/renderdata', ({ res, body }) => {
+        if (!harnessRenderData(res, body?.nodeId)) {
+            json(res, renderData);
+        }
+    });
     // The service worker re-requests the render data with GET when it warms its cache.
-    router.get('/public/renderdata', ({ res }) => json(res, renderData));
+    router.get('/public/renderdata', ({ res, query }) => {
+        if (!harnessRenderData(res, query.get('nodeId') ?? undefined)) {
+            json(res, renderData);
+        }
+    });
     router.post('/public/renderdata/ondemand', ({ res }) => json(res, renderData));
 
-    // Only reached when a response carries a `jobId`; kept so a stray call is not a 501.
-    router.get('/public/job', ({ res }) => json(res, finishedJob));
+    /**
+     * Job status. Only requested when a `renderdata` answer carried a `jobId`; the harness uses
+     * that for the DDB case, whose component needs `additionalData` - a field the no-job path
+     * hardcodes to `undefined`.
+     */
+    router.get('/public/job', ({ res, query }) =>
+        json(res, query.get('jobId') === DDB_JOB_ID ? ddbJob : finishedJob),
+    );
     router.post('/public/job/refresh', ({ res }) => json(res, finishedJob));
 
     /** Frontend-module fallback, requested only when `renderdata` answers 415. */

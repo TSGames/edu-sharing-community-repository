@@ -28,6 +28,27 @@ const values: Values = {
     userAffiliation: false,
     editProfile: false,
     workspaceColumns: ['cclom:title', 'cm:modified', 'ccm:commonlicense_key'],
+    /**
+     * Third-party embeddings the `url` module of rendering service 2 must ask consent for. When a
+     * node's `ccm:wwwurl` matches one of these patterns, the module renders its consent overlay
+     * instead of the external iframe (`GdprService`) - which is both the privacy-compliant state
+     * and the only one that renders without reaching a third-party host.
+     */
+    gdpr: {
+        enabled: true,
+        entry: [
+            {
+                regex: '.*youtube\\.com.*|.*youtu\\.be.*',
+                name: 'YouTube',
+                ref: 'https://policies.google.com/privacy',
+            },
+            {
+                regex: '.*vimeo\\.com.*',
+                name: 'Vimeo',
+                ref: 'https://vimeo.com/privacy',
+            },
+        ],
+    },
     rating: { mode: 'none' },
     register: { local: false, recoverPassword: false },
     stream: { enabled: false },

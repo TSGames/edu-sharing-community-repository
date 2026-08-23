@@ -716,6 +716,16 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "mock": {
+              "tsConfig": "projects/rendering-service-web-component/tsconfig.mock.json",
+              "outputPath": {
+                "base": "dist-mock-web-components/rendering-service",
+                "browser": ""
+              },
+              "optimization": false,
+              "sourceMap": false,
+              "outputHashing": "none"
             }
           },
           "defaultConfiguration": "production"

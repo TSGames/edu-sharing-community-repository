@@ -30,6 +30,15 @@ export function text(res: ServerResponse, body: string, statusCode = 200): void 
     res.end(body);
 }
 
+export function html(res: ServerResponse, body: string, statusCode = 200): void {
+    res.writeHead(statusCode, {
+        'Content-Type': 'text/html;charset=UTF-8',
+        'Content-Length': Buffer.byteLength(body),
+        'Cache-Control': 'no-store',
+    });
+    res.end(body);
+}
+
 export async function readBody(req: IncomingMessage): Promise<any> {
     if (req.method === 'GET' || req.method === 'DELETE' || req.method === 'HEAD') {
         return undefined;

@@ -359,6 +359,12 @@ export interface Node {
     isPublic?: boolean;
     rating?: unknown;
     relations?: { [key: string]: unknown };
+    /**
+     * Remote repository a node was imported from. `ModuleInfoService` classifies by
+     * `remote.repository.repositoryType` (youtube, learningapps, pixabay, ddb, ...) before it
+     * looks at the url or the mime type.
+     */
+    remote?: { id?: string; repository?: { repositoryType?: string } };
 }
 
 export interface Pagination {

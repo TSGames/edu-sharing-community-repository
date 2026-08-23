@@ -15,8 +15,16 @@ export const config = {
     host: env('MOCK_HOST', '127.0.0.1'),
     /** Directory of the Angular build output that is served under `/edu-sharing`. */
     distDir: path.resolve(frontendDir, env('MOCK_DIST_DIR', 'dist-mock')),
-    /** Static placeholder assets (themes, preview images, license icons). */
+    /** Static placeholder assets (themes, preview images, license icons, media samples). */
     assetsDir: path.resolve(e2eDir, 'mock-backend', 'assets'),
+    /**
+     * Build output of the rendering-service web component (`ng build rendering-service
+     * --configuration mock`), served under `/web-component` for the standalone RS2 harness.
+     */
+    webComponentDir: path.resolve(
+        frontendDir,
+        env('MOCK_WEB_COMPONENT_DIR', 'dist-mock-web-components/rendering-service'),
+    ),
     /** Serve only the REST API, e.g. when the app itself is served by `ng serve`. */
     apiOnly: process.argv.includes('--api-only') || env('MOCK_API_ONLY', '') === '1',
     /** Where unmocked REST requests are recorded. */

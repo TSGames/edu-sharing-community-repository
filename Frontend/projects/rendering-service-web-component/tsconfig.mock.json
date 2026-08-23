@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "paths": {
+      "ngx-edu-sharing-api": ["projects/edu-sharing-api/src/public-api"],
+      "ngx-edu-sharing-b-api": ["projects/b-api/src/public-api"],
+      "ngx-rendering-service-api": ["projects/rendering-service-api/src/public-api"],
+      "ngx-rendering-service-lib": ["projects/rendering-service-lib/src/index"],
+      "ngx-edu-sharing-ui": ["projects/edu-sharing-ui/src/lib"],
+      "ngx-edu-sharing-ui/*": ["projects/edu-sharing-ui/src/lib/*"]
+    }
+  }
+}

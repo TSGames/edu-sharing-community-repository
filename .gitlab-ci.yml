@@ -139,10 +139,14 @@ build frontend mock:
     # translations are then loaded from local assets and the startup redirect stays client-side.
     # And it builds unoptimized - that is ~2x faster and, again, pixel-identical.
     - npm run build:mock
+    # The rendering-service web component. It is what the standalone RS2 module harness mounts
+    # (`/rs2-harness`), so the renderer modules can be screenshotted without the application.
+    - npm run build:mock-web-component
     - npm run build:mock-backend
   artifacts:
     paths:
       - Frontend/dist-mock/
+      - Frontend/dist-mock-web-components/
       - Frontend/e2e-tests/build/
     expire_in: 1 day
 

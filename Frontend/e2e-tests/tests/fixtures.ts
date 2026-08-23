@@ -8,6 +8,10 @@ const IGNORED_CONSOLE_MESSAGES = [
     'mds does not define columns',
     'mds does not define sort info',
     'Failed to load resource: net::ERR_ABORTED',
+    // 415 is a legitimate answer of rendering service 2 ("no backend module for this media type")
+    // and the documented trigger for the frontend-module fallback; Chromium logs every non-2xx
+    // fetch to the console regardless.
+    'the server responded with a status of 415',
 ];
 
 export interface MockFixtures {

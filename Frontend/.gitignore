@@ -60,6 +60,7 @@ src/app/rest
 
 # Mock-backend e2e suite (baselines in e2e-tests/__screenshots__ are committed)
 /dist-mock
+/dist-mock-web-components
 /e2e-tests/build/
 /e2e-tests/test-results/
 /e2e-tests/report/
