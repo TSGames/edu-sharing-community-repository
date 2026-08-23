@@ -81,6 +81,7 @@
         @if (options()?.length) { @for (option of options(); track option.name) {
         <div
           class="entry"
+          [attr.data-test]="'sidebar-option-' + option.name"
           [tabindex]="option.isEnabled ? 0 : -1"
           cdkMonitorElementFocus
           (click)="option.callback(editorialSidebarService.nodes())"

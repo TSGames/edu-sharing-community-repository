@@ -1,0 +1,190 @@
+import { expect, Locator, Page } from '@playwright/test';
+import { LOCALE, settle } from '../fixtures';
+
+/**
+ * Thin page helpers for the mock suite.
+ *
+ * Intentionally separate from `tests/pages/*`: those page objects are written for a live
+ * edu-sharing instance (they create and delete content through the REST API). The selectors below
+ * are the same `data-test` hooks though, so both suites break together when the markup changes.
+ */
+export class AppPage {
+    /** `Der Wasserkreislauf` from the mock corpus - the node every node-related test works on. */
+    static readonly nodeId = '00000000-0000-4000-a000-000000000101';
+    static readonly nodeTitle = 'Der Wasserkreislauf';
+
+    static readonly loginUrl = './components/login';
+    static readonly renderUrl = `./components/render/${AppPage.nodeId}`;
+    static readonly searchUrl = './components/search';
+    static readonly workspaceUrl = './components/workspace';
+    static readonly collectionsUrl = './components/collections';
+
+    constructor(
+        private readonly page: Page,
+        private readonly theme: 'light' | 'dark' = 'light',
+    ) {}
+
+    /**
+     * Opens a page with the suite's locale and the project's theme.
+     *
+     * The default `locale=none` makes the application render the raw i18n keys, which is what
+     * keeps the committed baselines independent of the configured default language and of
+     * translation changes - only layout and data show up in a diff.
+     *
+     * `E2E_MOCK_LOCALE` overrides it with a real language (`de`, `en`, ...). That is meant for the
+     * capture run, which produces readable screenshots for the UX and documentation teams rather
+     * than baselines; a run with a real locale must not be compared against the committed
+     * baselines, which `E2E_MOCK_CAPTURE_DIR` takes care of (see `expectScreenshot`).
+     *
+     * `theme` overrides the stored dark-mode preference for this page view only
+     * (`ThemeService.registerDarkMode`).
+     */
+    async goto(url: string): Promise<void> {
+        const separator = url.includes('?') ? '&' : '?';
+        await this.page.goto(`${url}${separator}locale=${LOCALE}&theme=${this.theme}`);
+        await settle(this.page);
+    }
+
+    async login(username = 'e2e', password = 'e2e'): Promise<void> {
+        await this.page.locator('input[name="username"]').fill(username);
+        await this.page.locator('input[type="password"]').fill(password);
+        await this.page.locator('input[type="password"]').press('Enter');
+    }
+
+    /**
+     * Waits until a page shell is rendered.
+     *
+     * Deliberately not the scope button of the main nav: it is hidden below the mobile breakpoint,
+     * and with `locale=none` it only carries a raw i18n key anyway. Which page is shown is
+     * asserted through its content in the scenarios.
+     */
+    async expectPageShell(): Promise<void> {
+        await expect(this.mainContent).toBeVisible();
+    }
+
+    /** A row of a node list in table view. */
+    row(pattern: string | RegExp): Locator {
+        return this.page.locator('[role="main"] >> [role="row"]', { hasText: pattern });
+    }
+
+    /** A card of a node list in grid view. */
+    card(pattern: string | RegExp): Locator {
+        return this.page.locator('[role="listitem"]', { hasText: pattern });
+    }
+
+    /**
+     * The page's content area - the search page marks it with `.main-content`, workspace and
+     * collections with `role="main"`.
+     */
+    get mainContent(): Locator {
+        return this.page.locator('[role="main"], .main-content').first();
+    }
+
+    /** Opens the context menu of a node list row (right click, as in the real e2e suite). */
+    async openOptionsMenu(pattern: string | RegExp): Promise<void> {
+        await this.row(pattern).first().click({ button: 'right' });
+    }
+
+    /**
+     * Same, for the search page - it renders its results as cards, not as table rows.
+     *
+     * Scoped to `es-node-entries-card`: the collections carousel above the materials uses
+     * `es-node-entries-card-small` and carries the same titles, so an unscoped card locator would
+     * open the context menu of a collection instead of the material.
+     */
+    async openCardOptionsMenu(pattern: string | RegExp): Promise<void> {
+        await this.page
+            .locator('es-node-entries-card', { hasText: pattern })
+            .first()
+            .click({ button: 'right' });
+    }
+
+    /** Opens the overflow menu ("...") of the actionbar, e.g. on the render page. */
+    async openActionbarMenu(): Promise<void> {
+        await this.page.locator('es-actionbar button').last().click();
+    }
+
+    /** Opens the "+" create menu of the top bar. */
+    async openCreateMenu(): Promise<void> {
+        await this.page.locator('[data-test="top-bar-add-button"]').first().click();
+    }
+
+    async openUserMenu(): Promise<void> {
+        await this.page.locator('[data-test="main-nav-user-menu-button"]').click();
+    }
+
+    /** Clicks an entry of an open menu. `name` is the `OptionItem.name`, i.e. its i18n key. */
+    async clickMenuItem(name: string): Promise<void> {
+        await this.page.locator(`[data-test="menu-item-${name}"]`).click();
+    }
+
+    /** The topmost open dialog. */
+    get dialog(): Locator {
+        return this.page.locator('es-card-dialog-container').last();
+    }
+
+    /** Waits for a dialog to be open and settled, and returns it. */
+    async expectDialog(): Promise<Locator> {
+        const dialog = this.dialog;
+        await expect(dialog).toBeVisible();
+        await settle(this.page);
+        return dialog;
+    }
+
+    /**
+     * The editorial sidebar (`es-editorial-sidebar`), shared by workspace, search, collections and
+     * the render page.
+     */
+    get sidebar(): Locator {
+        return this.page.locator('es-editorial-sidebar');
+    }
+
+    /**
+     * Selects a node through its row checkbox.
+     *
+     * Not a plain row click: that navigates / opens the node. The checkbox feeds
+     * `EditorialSidebarService.handleSelection`, which is what populates the sidebar's options.
+     */
+    async selectRow(pattern: string | RegExp): Promise<void> {
+        await this.row(pattern)
+            .first()
+            .locator('input[type="checkbox"], mat-checkbox')
+            .first()
+            .click();
+        await settle(this.page);
+    }
+
+    /**
+     * Opens the editorial sidebar through its edge tab.
+     *
+     * The tab is rendered into a body-level CDK overlay, so it is *not* below
+     * `es-edge-toggle` in the DOM - that host element stays empty by design.
+     */
+    async openSidebar(): Promise<Locator> {
+        await this.page.locator('.edge-toggle.side-end').click();
+        await settle(this.page);
+        return this.sidebar;
+    }
+
+    /**
+     * An entry of the sidebar's option overview. `name` is the option's short id (`PREVIEW`, ...).
+     *
+     * Addressed through `data-test`, not through its label - the capture run renders the same page
+     * in a real language.
+     */
+    sidebarOption(name: string): Locator {
+        return this.sidebar.locator(`[data-test="sidebar-option-EDITORIAL.OPTIONS.${name}"]`);
+    }
+
+    async clickSidebarOption(name: string): Promise<void> {
+        await this.sidebarOption(name).first().click();
+        await settle(this.page);
+    }
+
+    async searchInTopBar(term: string): Promise<void> {
+        const field = this.page.locator('[data-test="top-bar-search-field"]');
+        await field.fill(term);
+        await field.press('Enter');
+        await settle(this.page);
+    }
+}

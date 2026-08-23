@@ -1,0 +1,26 @@
+/*
+ * Injected by Playwright before every screenshot comparison (`expect.toHaveScreenshot.stylePath`).
+ *
+ * Removes the last sources of sub-pixel noise that `animations: 'disabled'` does not cover.
+ */
+
+*,
+*::before,
+*::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+    caret-color: transparent !important;
+}
+
+/* Scrollbar rendering differs between platforms and would dominate the diff. */
+::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* Material ripples/overlays can linger for a frame after a click. */
+.mat-ripple-element,
+.mat-mdc-focus-indicator,
+.cdk-focus-trap-anchor {
+    display: none !important;
+}

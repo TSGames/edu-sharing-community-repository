@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "baseUrl": "./",
+        "target": "es2022",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "rootDir": "./tests",
+        "outDir": "./build/tests",
+        "lib": ["es2022", "DOM", "DOM.Iterable"],
+        "types": ["node"],
+        "typeRoots": ["../node_modules/@types"],
+        "experimentalDecorators": true,
+        "strict": true,
+        "skipLibCheck": true
+    },
+    "include": ["tests/**/*.ts"]
+}

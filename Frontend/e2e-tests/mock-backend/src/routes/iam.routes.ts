@@ -1,0 +1,97 @@
+import { recentAuthorities } from '../fixtures/authorities';
+import { dashboardShortcuts } from '../fixtures/node-extras';
+import { bookmarkedNodes } from '../fixtures/nodes';
+import { userEntry } from '../fixtures/user';
+import { json, noContent } from '../http';
+import { Router } from '../router';
+import { KNOWN_USERS } from '../session';
+
+const GUEST = KNOWN_USERS['e2e:e2e'];
+
+export function registerIamRoutes(router: Router): void {
+    router.get('/iam/v1/people/:repository/:person', ({ res, session }) =>
+        json(res, userEntry(session.user ?? GUEST)),
+    );
+
+    router.get('/iam/v1/people/:repository/:person/preferences', ({ res, session }) =>
+        json(res, { preferences: session.preferences }),
+    );
+
+    router.put('/iam/v1/people/:repository/:person/preferences', ({ res, body, session }) => {
+        session.preferences = typeof body === 'string' ? body : JSON.stringify(body ?? {});
+        noContent(res);
+    });
+
+    router.get('/iam/v1/people/:repository/:person/profileSettings', ({ res }) =>
+        json(res, { showEmail: false }),
+    );
+
+    router.get('/iam/v1/people/:repository/:person/stats', ({ res }) =>
+        json(res, { nodeCount: 0, collectionCount: 0 }),
+    );
+
+    router.get('/iam/v1/people/:repository/:person/memberships', ({ res }) =>
+        json(res, { groups: [], pagination: { total: 0, from: 0, count: 0 } }),
+    );
+
+    /** A bare array - see `api/fn/iam-v-1/get-dashboard-shortcuts.ts`, not a wrapper object. */
+    router.get('/iam/v1/people/:repository/:person/dashboard/shortcuts', ({ res }) =>
+        json(res, dashboardShortcuts),
+    );
+
+    /**
+     * Node lists. `BASKET` is the bookmark list the node-store dialog shows - populated, so the
+     * dialog renders rows instead of `SEARCH.NODE_STORE.LIST_EMPTY`. The remaining lists stay
+     * empty; no flow under test depends on them.
+     */
+    router.get('/iam/v1/people/:repository/:person/nodeList/:list', ({ res, params }) => {
+        const nodes = params.list === 'BASKET' ? bookmarkedNodes : [];
+        json(res, {
+            nodes,
+            pagination: { total: nodes.length, from: 0, count: nodes.length },
+        });
+    });
+
+    router.get('/iam/v1/people/:repository/:person/dataprotection', ({ res }) => json(res, {}));
+
+    /**
+     * Recently invited authorities - the share dialog and the simple-edit invite tab both request
+     * this before they render.
+     */
+    router.get('/iam/v1/authorities/:repository/recent', ({ res }) => json(res, recentAuthorities));
+
+    router.get('/iam/v1/authorities/:repository', ({ res }) => json(res, recentAuthorities));
+
+    /**
+     * Subgroup of an organization by group type - requested by the simple-edit invite section for
+     * every configured `simpleEdit.organization.groupTypes` entry. `profile.groupType` must echo
+     * the requested type: the component keys its lookup table by it.
+     */
+    router.get('/iam/v1/groups/:repository/:group/type/:type', ({ res, params }) =>
+        json(res, {
+            group: {
+                authorityName: `GROUP_${params.type}_${params.group.replace(/^GROUP_/, '')}`,
+                authorityType: 'GROUP',
+                profile: { displayName: 'Musterschule Administration', groupType: params.type },
+            },
+        }),
+    );
+
+    router.get('/iam/v1/groups/:repository/:group', ({ res, params }) =>
+        json(res, {
+            group: {
+                authorityName: params.group,
+                authorityType: 'GROUP',
+                profile: { displayName: 'Lehrkräfte', groupType: 'Lehrkräfte' },
+            },
+        }),
+    );
+
+    router.get('/iam/v1/groups/:repository', ({ res }) =>
+        json(res, { groups: [], pagination: { total: 0, from: 0, count: 0 } }),
+    );
+
+    router.get('/iam/v1/people/:repository', ({ res }) =>
+        json(res, { users: [], pagination: { total: 0, from: 0, count: 0 } }),
+    );
+}

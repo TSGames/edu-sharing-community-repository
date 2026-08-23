@@ -41,10 +41,17 @@
                 "glob": "**/*",
                 "input": "node_modules/tinymce-i18n/langs5",
                 "output": "/assets/tinymce/langs/"
-
               },
-              { "glob": "**/*", "input": "node_modules/ngx-extended-pdf-viewer/assets", "output": "/assets" },
-              { "glob": "**/*", "input": "projects/rendering-service-lib/assets", "output": "/" }
+              {
+                "glob": "**/*",
+                "input": "node_modules/ngx-extended-pdf-viewer/assets",
+                "output": "/assets"
+              },
+              {
+                "glob": "**/*",
+                "input": "projects/rendering-service-lib/assets",
+                "output": "/"
+              }
             ],
             "stylePreprocessorOptions": {
               "includePaths": [
@@ -52,7 +59,9 @@
                 "."
               ],
               "sass": {
-                "silenceDeprecations": ["if-function"]
+                "silenceDeprecations": [
+                  "if-function"
+                ]
               }
             },
             "styles": [
@@ -117,6 +126,25 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ]
+            },
+            "mock": {
+              "outputPath": {
+                "base": "dist-mock",
+                "browser": ""
+              },
+              "optimization": {
+                "scripts": false,
+                "styles": {
+                  "minify": false,
+                  "inlineCritical": false
+                },
+                "fonts": false
+              },
+              "outputHashing": "none",
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true,
+              "tsConfig": "tsconfig.mock.json"
             },
             "web-component": {
               "budgets": [
@@ -196,7 +224,9 @@
                 "."
               ],
               "sass": {
-                "silenceDeprecations": ["if-function"]
+                "silenceDeprecations": [
+                  "if-function"
+                ]
               }
             },
             "styles": [
@@ -455,7 +485,6 @@
         }
       }
     },
-
     "embed": {
       "projectType": "application",
       "schematics": {
@@ -546,7 +575,9 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
-            "polyfills": ["projects/embed/src/polyfills.ts"],
+            "polyfills": [
+              "projects/embed/src/polyfills.ts"
+            ],
             "tsConfig": "projects/embed/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -648,28 +679,53 @@
                 "projects/edu-sharing-ui/assets/scss"
               ],
               "sass": {
-                "silenceDeprecations": ["if-function"]
+                "silenceDeprecations": [
+                  "if-function"
+                ]
               }
             },
             "assets": [
-              { "glob": "**/*", "input": "node_modules/ngx-extended-pdf-viewer/assets", "output": "/assets/ngx-extended-pdf-viewer" },
-              { "glob": "**/*", "input": "projects/rendering-service-lib/assets", "output": "/" },
-              { "glob": "**/*", "input": "projects/rendering-service-lib/dist/assets", "output": "/" }
+              {
+                "glob": "**/*",
+                "input": "node_modules/ngx-extended-pdf-viewer/assets",
+                "output": "/assets/ngx-extended-pdf-viewer"
+              },
+              {
+                "glob": "**/*",
+                "input": "projects/rendering-service-lib/assets",
+                "output": "/"
+              },
+              {
+                "glob": "**/*",
+                "input": "projects/rendering-service-lib/dist/assets",
+                "output": "/"
+              }
             ],
             "browser": "projects/rendering-service-web-component/src/main.ts",
-            "polyfills": ["projects/rendering-service-web-component/src/polyfills.ts"],
+            "polyfills": [
+              "projects/rendering-service-web-component/src/polyfills.ts"
+            ],
             "allowedCommonJsDependencies": [
               "lodash"
             ]
           },
           "configurations": {
-            "production": {
-            },
+            "production": {},
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "mock": {
+              "tsConfig": "projects/rendering-service-web-component/tsconfig.mock.json",
+              "outputPath": {
+                "base": "dist-mock-web-components/rendering-service",
+                "browser": ""
+              },
+              "optimization": false,
+              "sourceMap": false,
+              "outputHashing": "none"
             }
           },
           "defaultConfiguration": "production"

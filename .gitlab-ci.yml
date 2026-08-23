@@ -8,6 +8,18 @@ variables:
   MAVEN_CLI: "-Ddocker.registry=$DOCKER_REGISTRY -Dhelm.deploy.url=$HELM_REGISTRY -Dhelm.deploy.type=$HELM_TYPE -Dmaven.deploy.releases=$MAVEN_DEPLOY_RELEASES -Dmaven.deploy.snapshots=$MAVEN_DEPLOY_SNAPSHOTS -Dversioning.configFile=maven-git-versioning-extension-ci.xml --batch-mode --errors --fail-fast --show-version"
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
   GIT_SUBMODULE_STRATEGY: recursive
+  # Language of the manual "screenshots mock" job (see below). Offered as a dropdown in the
+  # "Run pipeline" form; can also be set when starting the manual job itself.
+  E2E_MOCK_LOCALE:
+    value: "de"
+    options:
+      - "de"
+      - "en"
+      - "fr"
+      - "it"
+      - "none"
+    description: "Language of the screenshots produced by the manual job \"screenshots mock\". \"none\" renders the raw i18n keys."
+
 
 default:
   #image: maven:3.8.4-eclipse-temurin-17
@@ -22,6 +34,7 @@ default:
       command: [ "dockerd-entrypoint.sh" ]
 
 stages:
+  - build
   - test
   - deploy
 
@@ -109,6 +122,91 @@ unittest frontend:
   script:
     - npm run prebuild
     - npm run test-ci
+
+# Builds the application and the mock backend for the "e2e mock" job below.
+# Runs on the same image/cache as the other frontend jobs so the Angular build stays warm.
+build frontend mock:
+  <<: *frontend_job
+  stage: build
+  variables:
+    NODE_VERSION: 24.9
+  before_script:
+    - node -v
+    - npm -v
+    - cd Frontend
+    # Install dependencies on cache miss, e.g., when first running on a ci runner.
+    - ([[ -d node_modules ]] || npm ci)
+    - mkdir -p projects/edu-sharing-api/build/
+    - cp ../Backend/services/rest/api/src/main/resources/openapi.json projects/edu-sharing-api/build/openapi.json
+    - cd projects/edu-sharing-api
+    - npm run generate-api
+    - cd ../..
+  script:
+    # No library build at all: the `mock` configuration compiles against `tsconfig.mock.json`,
+    # which maps every `ngx-*` package to its sources instead of `dist/` - so neither `prebuild`
+    # (~4min) nor packaging the three generated API clients (~35s) is needed. Verified to render
+    # pixel-identically to a build against the packaged libraries.
+    #
+    # The configuration also keeps `environment.production === false`, which is required:
+    # translations are then loaded from local assets and the startup redirect stays client-side.
+    # And it builds unoptimized - that is ~2x faster and, again, pixel-identical.
+    - npm run build:mock
+    # The rendering-service web component. It is what the standalone RS2 module harness mounts
+    # (`/rs2-harness`), so the renderer modules can be screenshotted without the application.
+    - npm run build:mock-web-component
+    - npm run build:mock-backend
+  artifacts:
+    paths:
+      - Frontend/dist-mock/
+      - Frontend/dist-mock-web-components/
+      - Frontend/e2e-tests/build/
+    expire_in: 1 day
+
+# Validates the frontend against the mock backend, including screenshot comparison.
+# Runs on every build - no real repository required.
+e2e mock:
+  stage: test
+  # Pinned image: identical browser, fonts and rendering as when the baselines were recorded.
+  image: mcr.microsoft.com/playwright:v1.57.0-noble
+  needs: ["build frontend mock"]
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^maven\/release\/.*/ && $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_COMMIT_TAG && $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_COMMIT_BRANCH !~ /^maven\/release\/.*/ && $CI_COMMIT_TAG == null
+  cache:
+    # Own cache key: this image is glibc-based, the other frontend jobs run on alpine (musl),
+    # so their node_modules (native bindings) must not be shared.
+    key:
+      files:
+        - Frontend/package-lock.json
+      prefix: node-modules-playwright-1.57.0
+    paths:
+      - Frontend/node_modules
+  variables:
+    # A scenario without a committed baseline fails the build instead of silently skipping the
+    # visual comparison.
+    E2E_MOCK_REQUIRE_BASELINES: "1"
+    # Pinned: the baselines are recorded with `locale=none` (raw i18n keys), so this job must not
+    # inherit the pipeline-level language of the manual "screenshots mock" job.
+    E2E_MOCK_LOCALE: "none"
+  before_script:
+    - cd Frontend
+    - node -v
+    - npm -v
+    - ([[ -d node_modules ]] || npm ci)
+  script:
+    - npm run e2e:mock
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - Frontend/e2e-tests/report/
+      # Contains "-actual.png" / "-diff.png" of failed screenshot comparisons.
+      - Frontend/e2e-tests/test-results/
+      # Endpoints the app requested but the mock does not implement.
+      - Frontend/e2e-tests/build/unmocked.log
+    reports:
+      junit: Frontend/e2e-tests/report/junit.xml
 
 build storybook:
   <<: *frontend_job
@@ -254,3 +352,38 @@ check-helmreadme:
     - diff /tmp/README_service.md /tmp/service/README.md             || (echo "README was not generated before committing." && exit 1)
     - diff /tmp/README_transform-aio.md /tmp/transform-aio/README.md || (echo "README was not generated before committing." && exit 1)
     - diff /tmp/README_transform-es.md /tmp/transform-es/README.md   || (echo "README was not generated before committing." && exit 1)
+
+# Produces readable screenshots of every scenario for the UX and documentation teams.
+#
+# Manual on purpose: it is not a gate, it is an export. It renders the same scenarios as `e2e mock`
+# but in a real language (`E2E_MOCK_LOCALE`, default German) and *writes* the screenshots instead of
+# comparing them - a translated label differs from every committed baseline by definition, so a
+# comparison would be meaningless here.
+screenshots mock:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.57.0-noble
+  needs: ["build frontend mock"]
+  when: manual
+  # A failing scenario must not cost the screenshots that were already taken.
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_BRANCH !~ /^maven\/release\/.*/ && $CI_COMMIT_TAG == null
+  cache:
+    key:
+      files:
+        - Frontend/package-lock.json
+      prefix: node-modules-playwright-1.57.0
+    paths:
+      - Frontend/node_modules
+  before_script:
+    - cd Frontend
+    - ([[ -d node_modules ]] || npm ci)
+  script:
+    - npm run e2e:mock:capture
+  artifacts:
+    when: always
+    expire_in: 4 weeks
+    name: "screenshots-$E2E_MOCK_LOCALE-$CI_COMMIT_SHORT_SHA"
+    paths:
+      # One folder per project: chromium / chromium-dark / mobile / mobile-dark.
+      - Frontend/e2e-tests/screenshots/
